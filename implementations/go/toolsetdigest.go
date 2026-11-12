@@ -423,17 +423,18 @@ func digestOf(entries []map[string]any) (Digest, error) {
 	return Digest{"sha256-" + base64.StdEncoding.EncodeToString(sum[:]), text}, nil
 }
 
-// ToolsOf finds the tools array: the array itself, a tools/list result, or a JSON-RPC response.
+// ToolsOf extracts a complete tools array or the tools from an unpaginated tools/list result.
 func ToolsOf(value any) ([]any, error) {
 	if tools, ok := value.([]any); ok {
 		return tools, nil
 	}
 	if object, ok := value.(map[string]any); ok {
-		if tools, ok := object["tools"].([]any); ok {
-			return tools, nil
-		}
-		if result, ok := object["result"].(map[string]any); ok {
+		wrapped, _ := object["result"].(map[string]any)
+		for _, result := range []map[string]any{object, wrapped} {
 			if tools, ok := result["tools"].([]any); ok {
+				if _, hasCursor := result["nextCursor"]; hasCursor {
+					return nil, &DigestError{"TSD-PAGE", "collect all pages and pass the joined tools array"}
+				}
 				return tools, nil
 			}
 		}
@@ -527,7 +528,7 @@ func result(d Digest, err error) Result {
 }
 
 // Both computes the two digests of JSON text apart, so a member only the extras digest covers
-// cannot take the contract digest away. The error is for text that holds no tools array.
+// cannot take the contract digest away. The error covers parse failures and incomplete inputs.
 func Both(text []byte) (contract, extras Result, err error) {
 	value, err := Parse(text)
 	if err != nil {

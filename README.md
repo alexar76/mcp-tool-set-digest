@@ -13,8 +13,8 @@ the tool text can tell whether they were served the same thing.
 ## The digests in one paragraph
 
 Take the `tools` array of a complete `tools/list` result. Of every tool keep `name`,
-`description` (`""` when absent), `inputSchema` (`{}` when absent) and `outputSchema` (only when
-the server sent one). Sort the tools by name in UTF-16 code-unit order. Write the array as RFC 8785
+`description` (`""` when absent), `inputSchema` (`{}` when absent) and `outputSchema` (when
+it is a JSON object). Sort the tools by name in UTF-16 code-unit order. Write the array as RFC 8785
 canonical JSON. SHA-256 it. Write the result as `sha256-<base64>`. That is the **contract
 digest**. Everything else a tool carries (`title`, `annotations`, `_meta`, …) goes into an object
 `{"tools": {name: extras}}`, hashed the same way: the **extras digest**.
@@ -30,17 +30,17 @@ $ node implementations/javascript/tool-set-digest.mjs < read_file.json
 $ (cd implementations/go && go run .) < read_file.json
 ```
 
-All three print the same two digests. They are also the two values CrawlCheck's specification
-prints for this list.
+All three print the same two digests. If a response contains `nextCursor`, the commands return
+`TSD-PAGE`. Fetch every page and pass the concatenated `tools` array. A bare array carries no
+pagination information, so the caller has to supply the complete list.
 
 ## Why another document
 
-Tools that watch MCP servers each hash the tool list their own way, so their digests cannot be
-compared. Three of them had arrived at the same construction by November 2026: HISTOR (a public
-log), WARDEN (a client-side firewall) and CrawlCheck (a lock file and change feed). This document
-writes that construction down without any of their names in the rules, with vectors, so that a
-fourth implementation can agree with them on the first try. Appendix A of the specification says
-what each of them calls it and how the agreement was checked.
+Tools that watch MCP servers often hash different fields, which prevents direct comparison.
+HISTOR (a public log), WARDEN (a client-side firewall) and CrawlCheck (a lock file and change feed)
+had converged on the contract digest by November 2026. This document gives implementers one set of
+rules and test vectors. Appendix A records the contract checks and the differences in how extras
+are hashed.
 
 ## Checking an implementation
 
@@ -66,8 +66,9 @@ To run everything in this repository:
 scripts/check.sh
 ```
 
-It regenerates the vectors and compares them with the file, runs the three implementations over
-them, and checks that the three command lines print the same answer.
+Requires Python 3.9+, Node.js 20+ and Go 1.21+. It compares the generated vectors with the checked-in
+file, runs the three implementations over them, and checks that all three command lines agree on a
+complete list and reject a response that has `nextCursor`.
 
 ## Status
 

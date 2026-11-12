@@ -23,6 +23,32 @@ norm() { python3 -c 'import json,sys; print(json.dumps(json.loads(sys.argv[1]), 
 [ "$(norm "$py")" = "$(norm "$js")" ] && [ "$(norm "$js")" = "$(norm "$go")" ] || { echo "the command lines disagree: $py | $js | $go"; exit 1; }
 echo "command lines agree: $(norm "$py")"
 
+check_pagination() {
+  local complete partial output
+  for complete in "{\"tools\":$sample}" "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"tools\":$sample}}"; do
+    output=$(printf '%s' "$complete" | "$@")
+    [ "$(norm "$output")" = "$(norm "$py")" ] || { echo "$* hashes the wrapped input differently: $output"; return 1; }
+  done
+  for partial in '{"tools":[],"nextCursor":"page2"}' '{"jsonrpc":"2.0","id":1,"result":{"tools":[],"nextCursor":""}}'; do
+    if output=$(printf '%s' "$partial" | "$@"); then
+      echo "$* accepted a partial page: $output"
+      return 1
+    fi
+    python3 - "$output" <<'PY'
+import json
+import sys
+
+out = json.loads(sys.argv[1])
+if out.get("error") != "TSD-PAGE" or {"contract", "extras"}.intersection(out):
+    sys.exit(f"expected TSD-PAGE without digests: {out}")
+PY
+  done
+}
+check_pagination python3 implementations/python/tool_set_digest.py
+check_pagination node implementations/javascript/tool-set-digest.mjs
+(cd implementations/go && check_pagination go run .)
+echo "command lines reject partial pages"
+
 # The example printed in README.md is what the implementation prints.
 readme=$(printf '%s' '[{"name": "read_file", "title": "Read file", "description": "Read a file from disk.", "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}, "annotations": {"readOnlyHint": true}}]' | python3 implementations/python/tool_set_digest.py)
 grep -qF -- "$readme" README.md || { echo "README.md shows another output than: $readme"; exit 1; }

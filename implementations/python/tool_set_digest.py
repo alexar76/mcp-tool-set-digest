@@ -144,13 +144,15 @@ def digest_of(entries: list[dict[str, Any]]) -> tuple[str, str]:
 
 
 def tools_of(value: Any) -> list[Any]:
-    """The ``tools`` array of a parsed input: the array itself, a ``tools/list`` result, or a
-    JSON-RPC response carrying one."""
-    for candidate in (value, value.get("tools") if isinstance(value, dict) else None,
-                      (value.get("result") or {}).get("tools") if isinstance(value, dict)
-                      and isinstance(value.get("result"), dict) else None):
-        if isinstance(candidate, list):
-            return candidate
+    """Extract a complete tools array or the tools from an unpaginated ``tools/list`` result."""
+    if isinstance(value, list):
+        return value
+    if isinstance(value, dict):
+        for result in (value, value.get("result")):
+            if isinstance(result, dict) and isinstance(result.get("tools"), list):
+                if "nextCursor" in result:
+                    raise DigestError("TSD-PAGE", "collect all pages and pass the joined tools array")
+                return result["tools"]
     raise DigestError("TSD-TOOL", "the input holds no tools array")
 
 

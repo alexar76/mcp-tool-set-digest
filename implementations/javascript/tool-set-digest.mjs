@@ -97,10 +97,17 @@ function digestOf(entries) {
   return { digest: 'sha256-' + createHash('sha256').update(text, 'utf8').digest('base64'), canonical: text };
 }
 
-/** The `tools` array of a parsed input: the array itself, a tools/list result, or a JSON-RPC response.
+/** Extract a complete tools array or the tools from an unpaginated tools/list result.
  * @param {any} value @returns {unknown[]} */
 export function toolsOf(value) {
-  for (const candidate of [value, value?.tools, value?.result?.tools]) if (Array.isArray(candidate)) return candidate;
+  if (Array.isArray(value)) return value;
+  for (const result of [value, value?.result]) {
+    if (!Array.isArray(result?.tools)) continue;
+    if (Object.hasOwn(result, 'nextCursor')) {
+      throw new DigestError('TSD-PAGE', 'collect all pages and pass the joined tools array');
+    }
+    return result.tools;
+  }
   throw new DigestError('TSD-TOOL', 'the input holds no tools array');
 }
 

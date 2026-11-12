@@ -2,10 +2,10 @@
 
 Identifier: `mcp-tool-set-digest/1` · Editor's draft, 2026-11-12 · Text: CC BY 4.0 · Code and vectors: Apache-2.0 OR MIT
 
-**Status.** A draft for discussion. It writes down a digest that several independently maintained
-tools already compute and agree on (Appendix A), so that the next implementation can agree with
-them by reading one page and running one file of vectors. It is not a product of the MCP project or
-of a standards body, and nobody named in it has endorsed it.
+**Status.** A draft for discussion. It documents the contract digest used by HISTOR and WARDEN,
+which CrawlCheck independently reproduced on a sample of public servers (Appendix A). The vectors
+let another implementation check the same rules. This is an editor's draft without endorsement by
+the MCP project or any of the projects named in it.
 
 The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be read as in RFC 2119 and RFC 8174.
 
@@ -53,7 +53,10 @@ member a tool carries (`title`, `annotations`, `icons`, `execution`, `_meta`, ve
 
 1. The input is the `tools` array of a successful `tools/list` result. When the result is paged,
    every page MUST be read (`nextCursor` followed to the end) and the arrays joined in the order
-   they were read. A producer MUST NOT digest part of a list.
+   they were read. A producer MUST NOT digest part of a list (`TSD-PAGE`, section 10). A wrapper
+   containing `nextCursor` is insufficient input, even if the cursor is an empty string. A bare
+   array or a final page cannot show whether earlier pages were omitted. The caller is responsible
+   for gathering them before hashing.
 2. A list is what one server answered to one request under one authorisation. A server may list
    other tools to another user, scope or protocol version; those are other tool sets. A digest
    says nothing about a list the producer did not read.
@@ -172,14 +175,14 @@ the extras digest `sha256-Kmdz0r/Y+YnXALUVpJTXG8TUbKQhoFKQ7CeEpIw+1Oc=` and the 
 
 ### 8.1 The bounded form in use
 
-The two public records that publish an extras digest today (Appendix A) compute it with limits
-that suit storing the extras, not only hashing them:
+HISTOR's public extras digest (Appendix A) uses the following limits when preparing extras for
+storage and hashing:
 
 * a tool whose extras exceed 16,384 bytes is left out of `tools` and named, with its size, in a
   member `oversized`; once the members of `tools` add up to 262,144 bytes the remaining names are
   listed in a member `omitted`;
-* NUL and unpaired surrogates in strings become U+FFFD, and a value nested deeper than 12 levels
-  is replaced by the string `"…"`;
+* NUL and unpaired surrogates in strings become U+FFFD, a number that overflows a double becomes
+  `null`, and a value nested deeper than 12 levels is replaced by the string `"…"`;
 * an entry that is not a tool is passed over, and of two tools with one name the one listed last
   is kept.
 
@@ -200,6 +203,7 @@ and `b08036e71687b7855244656f049eec719c13c214eb9575731f118331e565cb3c`.
 
 | Code | When | Which digest |
 |---|---|---|
+| `TSD-PAGE` | the complete tool list is unavailable, including a result that still carries `nextCursor` | both |
 | `TSD-TOOL` | an element of the array is not a JSON object, or has no non-empty string `name` | both |
 | `TSD-NUMBER` | a member holds a number with no IEEE 754 double | the digest that covers that member |
 | `TSD-TEXT` | a member holds a string, or a member name, with an unpaired surrogate | the digest that covers that member |
@@ -274,19 +278,22 @@ Named for comparison. None of these projects has reviewed this text.
 
 Checked for this draft on 2026-11-12: HISTOR's and WARDEN's code, each run over the 68 vectors,
 gives the contract digest and the refusals of every one (`scripts/cross_check_histor.py`,
-`scripts/cross_check_warden.mjs`); and the reference implementation reproduces the five values
-printed in CrawlCheck's specification as read that day: the empty list, and for the one-tool list
-of section 8 its `tools_sha256`, its `extras_sha256` and the per-tool `contract` and `extras`. In
-the MCP Registry's issue 82, CrawlCheck's author reported on 2026-11-07 that this digest, computed
-from his own reads of 30 registry servers, equalled HISTOR's published one on all 30. A daily
-comparison of HISTOR's and CrawlCheck's digests of the same servers is published at
+`scripts/cross_check_warden.mjs`). The reference implementation reproduces the two contract-set
+digests in CrawlCheck's lockfile examples (the empty list and the one-tool list in section 8).
+In [MCP Registry issue 82](https://github.com/modelcontextprotocol/registry/issues/82), CrawlCheck's
+author reported on 2026-11-07 that the contract digest, computed from his own reads of 30 registry
+servers, equalled HISTOR's published one on all 30. A daily comparison of HISTOR's and CrawlCheck's
+digests of the same servers is published at
 <https://histor.modelmarket.dev/datasets/peers/crawlcheck/>.
 
-**The extras digest.** HISTOR (`toolExtrasDigest`) and CrawlCheck (`jcs_v1.extras_sha256`, since
-2026-11-07) publish the extras digest in the bounded form of section 8.1; CrawlCheck's author
-reported equal values on the same 30 servers. CrawlCheck writes the extras object as RFC 8785.
-HISTOR writes it with a serialiser that differs from RFC 8785 in three narrow cases, which that
-report also names: fractions and integral floats such as `1.0`, integers beyond 2^53, and member
+**The extras digest.** In the 2026-11-07 follow-up on issue 82, CrawlCheck's author described using
+the object from section 8 with RFC 8785 and reported equal values for HISTOR and CrawlCheck on the
+same 30 servers. The CrawlCheck lockfile page retrieved on 2026-11-12 describes an array of
+`{name, extras}` and gives a different `extras_sha256` for the section 8 example. Treat the reported
+agreement as scoped to that run. A comparison needs both producers' encoding and bounds.
+
+HISTOR's deployed `toolExtrasDigest` uses the bounded form of section 8.1 and a serialiser that
+differs from RFC 8785 for fractions and integral floats such as `1.0`, integers beyond 2^53, and member
 names outside the Basic Multilingual Plane (sorted by code point). `scripts/cross_check_histor.py`
 runs HISTOR's code over the vectors: of 68, the extras digest agrees on 55 and differs on 13, each of
 them one of those three cases or one of the limits of section 8.1. HISTOR's code since 2026-11-12 can
