@@ -1,0 +1,22 @@
+mcp-tool-set-digest is licensed in two parts.
+
+The specification text (SPEC.md, README.md) is licensed under the Creative Commons
+Attribution 4.0 International licence (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+
+The implementations (implementations/), the scripts (scripts/) and the test vectors
+(vectors/) are licensed under either of
+
+  * Apache License, Version 2.0 ...... see LICENSE-APACHE
+  * MIT license ...................... see LICENSE-MIT
+
+at your option.
+
+Why both for the code: MIT is the licence most implementers already have cleared,
+and Apache-2.0 carries an express patent grant. Taking either licence is sufficient.
+
+CONTRIBUTION
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for
+inclusion in this repository shall be licensed as above, without any additional
+terms or conditions.
