@@ -278,19 +278,22 @@ Named for comparison. None of these projects has reviewed this text.
 
 Checked for this draft on 2026-11-12: HISTOR's and WARDEN's code, each run over the 68 vectors,
 gives the contract digest and the refusals of every one (`scripts/cross_check_histor.py`,
-`scripts/cross_check_warden.mjs`). The reference implementation reproduces the two contract-set
-digests in CrawlCheck's lockfile examples (the empty list and the one-tool list in section 8).
+`scripts/cross_check_warden.mjs`). The reference implementation reproduces the five values in
+[CrawlCheck's lockfile examples](https://crawlcheck.io/spec/mcp-lockfile#jcs-v1), fetched directly on
+2026-11-12: the empty-list contract digest and the set and per-tool contract and extras digests for
+the `read_file` example in section 8. The five values cover these two inputs. They do not establish
+agreement on the full vector suite.
 In [MCP Registry issue 82](https://github.com/modelcontextprotocol/registry/issues/82), CrawlCheck's
 author reported on 2026-11-07 that the contract digest, computed from his own reads of 30 registry
-servers, equalled HISTOR's published one on all 30. A daily comparison of HISTOR's and CrawlCheck's
-digests of the same servers is published at
+servers, equalled HISTOR's published one on all 30. The daily comparison checks the contract digests
+of the same servers and publishes the results at
 <https://histor.modelmarket.dev/datasets/peers/crawlcheck/>.
 
 **The extras digest.** In the 2026-11-07 follow-up on issue 82, CrawlCheck's author described using
-the object from section 8 with RFC 8785 and reported equal values for HISTOR and CrawlCheck on the
-same 30 servers. The CrawlCheck lockfile page retrieved on 2026-11-12 describes an array of
-`{name, extras}` and gives a different `extras_sha256` for the section 8 example. Treat the reported
-agreement as scoped to that run. A comparison needs both producers' encoding and bounds.
+the object from section 8 and reported equal values for HISTOR and CrawlCheck on the same 30
+servers. The current lockfile page documents that object shape with size caps and orders tools by
+Unicode code point when applying the caps. The shared example does not exercise differences in
+encoding, ordering or bounds. The daily comparison's inputs carry only the contract digest.
 
 HISTOR's deployed `toolExtrasDigest` uses the bounded form of section 8.1 and a serialiser that
 differs from RFC 8785 for fractions and integral floats such as `1.0`, integers beyond 2^53, and member
@@ -299,7 +302,8 @@ runs HISTOR's code over the vectors: of 68, the extras digest agrees on 55 and d
 them one of those three cases or one of the limits of section 8.1. HISTOR's code since 2026-11-12 can
 also write the RFC 8785 form (its `rfc8785` extras scheme) and move every stored value to it in one
 step; under that scheme it agrees on 58 and differs on the 10 limits of section 8.1. Its public log
-still publishes the first form until CrawlCheck, which reads those values daily, has agreed a date.
+still publishes the first form. A change to the public extras encoding is pending coordination
+with CrawlCheck.
 
 **Other constructions.** These cover other members or serialise differently, and give other
 values for the same list:
