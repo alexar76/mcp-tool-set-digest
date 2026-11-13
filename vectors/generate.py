@@ -134,6 +134,10 @@ CASES: list[tuple] = [
     ("extras-one-of-two-reordered", "The same two tools in the other order, and the members of the first in another order.",
      r'[{"name":"list_files","inputSchema":{"type":"object"},"description":"List the files in a folder."},'
      r'{"annotations":{"readOnlyHint":true},"inputSchema":{"required":["path"],"properties":{"path":{"type":"string"}},"type":"object"},"description":"Read a file from disk.","title":"Read file","name":"read_file"}]'),
+    ("annotation-read-only-true", "A tool declares readOnlyHint true.",
+     r'[{"name":"read_file","description":"Read a file.","inputSchema":{"type":"object"},"annotations":{"readOnlyHint":true}}]'),
+    ("annotation-read-only-false", "Only readOnlyHint changes to false: the contract digest stays equal and the extras digest changes.",
+     r'[{"name":"read_file","description":"Read a file.","inputSchema":{"type":"object"},"annotations":{"readOnlyHint":false}}]'),
     ("extras-numbers-as-written", "Numbers in extras, in forms JSON allows.",
      r'[{"name":"n","_meta":{"price":1.0,"limit":1E2,"ratio":0.50,"big":9007199254740993,"tiny":1e-7}}]'),
     ("extras-numbers-canonical", "The same doubles in the form RFC 8785 writes them.",
@@ -149,6 +153,12 @@ CASES: list[tuple] = [
     ("duplicate-names-both-with-extras", "Two tools share a name and both carry extras: an object keyed by name cannot hold both.",
      r'[{"name":"search","description":"Search the web.","title":"Web search"},{"name":"search","description":"Search the docs.","title":"Docs search"}]',
      {"extras": "TSD-NAME"}),
+    ("duplicate-names-before-lone-surrogate", "Two tools share a name, both carry extras, and the first listed holds a lone surrogate in them: TSD-NAME and TSD-TEXT both apply, and section 10 reports TSD-NAME.",
+     r'[{"name":"search","description":"Search the web.","title":"Web \ud800 search"},{"name":"search","description":"Search the docs.","title":"Docs search"}]',
+     {"extras": "TSD-NAME"}),
+    ("duplicate-names-before-number-overflow", "The same with a number that has no double in the first one's extras: TSD-NAME and TSD-NUMBER both apply, and section 10 reports TSD-NAME.",
+     r'[{"name":"search","description":"Search the web.","_meta":{"limit":1e400}},{"name":"search","description":"Search the docs.","title":"Docs search"}]',
+     {"extras": "TSD-NAME"}),
     # --- what is not a tool ---
     ("tool-is-string", "An entry that is not an object.", r'["ping"]', "TSD-TOOL"),
     ("tool-is-null", "An entry that is null.", r'[null]', "TSD-TOOL"),
@@ -157,6 +167,8 @@ CASES: list[tuple] = [
     ("name-empty", "A tool whose name is the empty string.", r'[{"name":""}]', "TSD-TOOL"),
     ("name-not-string", "A tool whose name is a number.", r'[{"name":1}]', "TSD-TOOL"),
     ("one-bad-among-good", "One entry that is not a tool: the whole set has no digest.", r'[{"name":"ping"},{"name":null}]', "TSD-TOOL"),
+    ("lone-surrogate-before-bad-entry", "A lone surrogate in the first tool and an entry with an empty name after it: TSD-TOOL and TSD-TEXT both apply, and section 10 reports TSD-TOOL for both digests.",
+     r'[{"name":"read","description":"x\ud800y"},{"name":""}]', "TSD-TOOL"),
 ]
 
 # (first id, second id, which digest) that must be equal / must differ
@@ -169,6 +181,7 @@ EQUAL = [
     ("extras-none", "extras-present", "contract"), ("extras-present", "extras-annotation-flipped", "contract"),
     ("extras-present", "extras-contract-changed", "extras"),
     ("extras-one-of-two", "extras-one-of-two-reordered", "contract"), ("extras-one-of-two", "extras-one-of-two-reordered", "extras"),
+    ("annotation-read-only-true", "annotation-read-only-false", "contract"),
     ("extras-numbers-as-written", "extras-numbers-canonical", "extras"),
     ("order-utf16-escaped", "order-utf16-raw", "contract"),
     ("duplicate-names", "duplicate-names-reordered", "contract"),
@@ -181,6 +194,7 @@ EQUAL = [
 DIFFER = [
     ("output-schema-absent", "output-schema-empty", "contract"), ("output-schema-empty", "output-schema-object", "contract"),
     ("extras-present", "extras-annotation-flipped", "extras"), ("extras-present", "extras-contract-changed", "contract"),
+    ("annotation-read-only-true", "annotation-read-only-false", "extras"),
     ("extras-present", "extras-one-of-two", "extras"),
     ("enum-constrained", "enum-removed", "contract"), ("enum-constrained", "description-changed", "contract"),
     ("array-order-a", "array-order-b", "contract"), ("string-nfc", "string-nfd", "contract"),
@@ -229,7 +243,7 @@ def build() -> dict:
         "how": "tools is JSON text. Parse it and compute the contract digest (SPEC.md sections 4 to 7) and the "
                "extras digest (section 8). Each of contract and extras is {digest, hex, canonical}, where digest is "
                "the SRI form, hex the same hash as sha256:<hex> and canonical the text that is hashed; or {error} "
-               "with the code of section 10; extras is {digest: null} when no tool carries a member outside the "
+               "with the code of section 10 (where several codes apply, the one section 10 says to report); extras is {digest: null} when no tool carries a member outside the "
                "contract. equal and differ name pairs of vectors whose digests of the named kind must match or must "
                "not.",
         "vectors": vectors,

@@ -6,8 +6,8 @@
 One way to hash what an MCP server says about its tools, so that two parties who never exchanged
 the tool text can tell whether they were served the same thing.
 
-* [`SPEC.md`](SPEC.md): the specification, `mcp-tool-set-digest/1` (draft of 2026-11-12, about four pages).
-* [`vectors/vectors.json`](vectors/vectors.json): 68 test vectors, with the canonical text each digest is the hash of.
+* [`SPEC.md`](SPEC.md): the specification, `mcp-tool-set-digest/1` (draft of 2026-11-13, about four pages).
+* [`vectors/vectors.json`](vectors/vectors.json): 73 test vectors, with the canonical text each digest is the hash of.
 * [`implementations/`](implementations/): reference implementations in Python, JavaScript and Go, each one file with no dependencies.
 
 ## The digests in one paragraph
@@ -42,6 +42,10 @@ had converged on the contract digest by November 2026. This document gives imple
 rules and test vectors. Appendix A records the contract checks and the differences in how extras
 are hashed.
 
+For an approval that depends on annotations, compare an annotation-inclusive digest or the
+contract and complete extras separately. [Profiles and approval](SPEC.md#111-profiles-and-approval)
+defines which coverage a decision requires and how to describe it in signed records.
+
 ## Checking an implementation
 
 Read `vectors/vectors.json`. For each vector, parse `tools` (it is JSON text, kept as text so that
@@ -57,8 +61,9 @@ The vectors cover what goes wrong in practice:
 | numbers | `1.0`, `1E2`, `-0.0`, `1e21`, `1e-7`, an integer beyond 2^53, `1e400` |
 | strings | every JSON escape, U+2028, NFC and NFD, lone surrogates |
 | members | absent, `null` and wrongly typed `description`, `inputSchema`, `outputSchema` |
-| extras | present and absent; an annotation flip; numbers and names outside the BMP; two tools with one name |
+| extras | present and absent; `readOnlyHint` and `destructiveHint` flips; numbers and names outside the BMP; two tools with one name |
 | not a tool | a string, `null`, no `name`, an empty `name` |
+| several codes | two tools with one name whose extras also hold a lone surrogate or a number with no double; a lone surrogate before an entry that is not a tool |
 
 To run everything in this repository:
 
@@ -72,7 +77,7 @@ complete list and reject a response that has `nextCursor`.
 
 ## Status
 
-A draft by one editor, offered for discussion to the people who implement tool-definition pinning
+A draft by two editors, Aleksandr Artamokhov (HISTOR) and Emmanuel Orta (CrawlCheck), offered for discussion to the people who implement tool-definition pinning
 and to the MCP Security Interest Group, whose agenda lists "Runtime drift: `list_changed` semantics
 after approval" and "Supply-chain integrity" as open topics. Comments and other implementations'
 results are welcome as issues. Open questions are in Appendix B of the specification.

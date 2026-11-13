@@ -1,11 +1,13 @@
 # MCP tool-set digest, version 1
 
-Identifier: `mcp-tool-set-digest/1` · Editor's draft, 2026-11-12 · Text: CC BY 4.0 · Code and vectors: Apache-2.0 OR MIT
+Identifier: `mcp-tool-set-digest/1` · Editors' draft, 2026-11-13 · Text: CC BY 4.0 · Code and vectors: Apache-2.0 OR MIT
+
+Editors: Aleksandr Artamokhov (HISTOR), Emmanuel Orta (CrawlCheck)
 
 **Status.** A draft for discussion. It documents the contract digest used by HISTOR and WARDEN,
-which CrawlCheck independently reproduced on a sample of public servers (Appendix A). The vectors
-let another implementation check the same rules. This is an editor's draft without endorsement by
-the MCP project or any of the projects named in it.
+and the definition CrawlCheck implements from its own code (Appendix A). The vectors let another
+implementation check the same rules. This is an editors' draft without endorsement by the MCP
+project or any other project named in it.
 
 The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be read as in RFC 2119 and RFC 8174.
 
@@ -20,20 +22,21 @@ Two parties can only compare digests they compute the same way. Today each tool 
 its own way: different members, different order, different number formatting. This document fixes
 one way, as two digests:
 
-* the **contract digest**, over the parts of every tool that a model reads and a call must
-  satisfy: its name, description and schemas;
+* the **contract digest**, over the tool's name, description, input schema and output schema as
+  defined in section 4;
 * the **extras digest**, over everything else a tool carries: its title, annotations, icons,
   `_meta` and vendor members.
 
-Together they cover every member of every tool, and they say which kind of change happened: the
-contract digest moved, so what a model reads or a call accepts changed; only the extras digest
-moved, so an annotation flipped, a title was edited or a price in `_meta` changed.
+When both parts are available, they cover the normalized contract entries and the extras as
+defined in sections 4 and 8. A change confined to annotations, titles or prices in `_meta` moves
+the extras digest.
 
 With them:
 
-* a client that approved a tool set can tell that the set it is offered now is the same one;
-* two clients, or a client and a public record, can tell whether a server serves them the same set,
-  by exchanging 32 bytes and no tool text;
+* a client can compare the fields it approved with the set it is offered now, subject to the
+  coverage rules in section 11.1;
+* two clients, or a client and a public record, can compare the sets they observed by exchanging
+  digest values and their profiles;
 * a lock file written by one tool can be checked by another.
 
 What they do not show is in section 12. In short: the digests cover what a server says about its
@@ -157,8 +160,10 @@ version is not mistaken for this one.
 4. When no tool has an extra, the set has **no extras digest**. That is a state like any other: it
    is written as JSON `null` (or left out), and it equals itself and differs from every digest.
 5. When two tools share a name and both have extras, an object keyed by name cannot hold both, and
-   the extras digest cannot be computed (`TSD-NAME`). When only one of them has extras, the object
-   holds that one.
+   the extras digest cannot be computed (`TSD-NAME`). A result that depended on listing order would
+   not be a digest of the set. A producer SHOULD report the shared name: two tools a client cannot
+   tell apart by name are a finding about the server on their own. When only one of them has extras,
+   the object holds that one.
 6. `TSD-NUMBER` and `TSD-TEXT` (section 10) apply to the extras as they apply to contract members,
    and separately: a set can have a contract digest and no computable extras digest, and the
    reverse.
@@ -186,10 +191,13 @@ storage and hashing:
 * an entry that is not a tool is passed over, and of two tools with one name the one listed last
   is kept.
 
-A digest in that form equals the digest of this section whenever none of these applies, which is
-the ordinary case. Where one applies the two differ, and the bounded form gives a digest where
-this section gives none. A producer that applies the limits SHOULD say so beside the digest.
-Whether the limits belong in the definition is an open question (Appendix B).
+These limits are a way of storing extras, not part of the definition: the extras digest is
+defined on what the server sent. A value computed under them is not the extras digest of section 8,
+even where the two agree. A bounded digest written as RFC 8785 agrees with section 8 when the
+limits leave the same extras object intact; the historical serializer also has encoding differences
+(Appendix A). A producer that publishes a bounded value MUST label it with the profile it used and
+MUST NOT present it as the extras digest, and SHOULD report any omissions or substitutions beside
+it. CrawlCheck's `jcs_v1` is a bounded form of this kind.
 
 ## 9. Per-tool digests (optional)
 
@@ -210,7 +218,13 @@ and `b08036e71687b7855244656f049eec719c13c214eb9575731f118331e565cb3c`.
 | `TSD-NAME` | two tools share a name and both have extras | the extras digest |
 
 A producer that meets one of these MUST NOT publish that digest for the set and SHOULD publish the
-code, with the tool's name when it has one. It MUST NOT skip the tool, repair the value or digest
+code, with the tool's name when it has one.
+
+When more than one code applies to the same digest, a producer reports the first of `TSD-PAGE`,
+`TSD-TOOL` and `TSD-NAME` that applies; these concern the set and can be found without writing any
+value. Between `TSD-NUMBER` and `TSD-TEXT` either conforms, and the vectors hold no set where both
+apply to one digest. A producer MAY report the other codes as well. Which code is reported does not
+change a comparison (section 11). It MUST NOT skip the tool, repair the value or digest
 the rest. A comparison with a set whose digest could not be computed has no result; it is not a
 change.
 
@@ -219,11 +233,11 @@ contract digest is computed from the contract members only.
 
 ## 11. Comparing
 
-* Equal contract digests: the two lists had the same tools with the same names, descriptions and
-  schemas.
+* Equal contract digests: the two lists had the same normalized contract entries.
 * Different contract digests: at least one contract member of one tool differs, or a tool is in
   one list and not in the other.
-* Equal contract digests and different extras digests (or one absent): only extras differ.
+* Equal contract digests and different comparable extras digests, including verified absence of
+  extras on one side: extras changed and the normalized contract stayed equal.
 
 A digest is comparable only with a digest of a list read under like conditions. A producer SHOULD
 record with it: when the list was read; the endpoint or the package and version; the protocol
@@ -233,6 +247,42 @@ of the same servers were compared on one day, two of the causes of different dig
 kind: a reader that stopped at the first page, and a reader whose missing protocol header made
 servers answer in an older protocol version, without `outputSchema`.
 
+### 11.1 Profiles and approval
+
+A digest profile identifies the input scope (one tool or a complete tool set), member selection,
+rules for absent or malformed members, normalization and canonical encoding. A verifier SHOULD
+compare the algorithm and profile for each digest component before comparing its value. For a
+split digest, identify the contract and extras profiles separately. In particular, a label for
+the RFC 8785 contract digest does not identify the extras encoding or its bounds.
+
+Digest coverage depends on the decision. A claim about the normalized contract entries can use the
+contract digest alone. Carrying forward an approval requires comparable evidence for every member
+that influenced it, including whether a relevant member was absent. A control that uses
+`annotations.readOnlyHint` or `annotations.destructiveHint` requires an annotation-inclusive
+digest or a separate, complete extras comparison. A policy that approved the full declaration
+requires coverage of the whole declaration at the precision it approved. Compute the current
+digest from the declaration observed for that client and server context (section 3), then compare
+it with the approved digest. Bind a call that relies on that approval to the observed declaration
+used for the comparison.
+
+For approval of an individual declaration, resolve the identity of that declaration. When several
+entries share a name, section 8 groups their extras by name, leaving the association between an
+extra and a specific contract entry ambiguous.
+
+Treat the approval as unverifiable if a required profile is unknown or incompatible, a
+declaration was unobserved or refused by its profile, or a bounded result leaves the required
+members' coverage uncertain. Require a complete, comparable observation before carrying
+approval forward. Record a verified absence of extras (section 8.4) separately from an
+unobserved list or a list the profile could not digest. For a refusal, retain the profile and
+its error code when available (section 10).
+
+When a signed record uses these digests, include each component's kind, algorithm, value, profile
+and covered member list in the signed scope, alongside the subject and observation context. For
+an open-ended member set, state the selection rule, such as all tool members except the four
+contract members, and include any coverage limits or omissions in the signed record. The
+signature binds the digest to that scope. Keep the digest inputs defined by sections 7 and 8. A
+construction that puts the profile identifier into the hashed bytes uses a different profile.
+
 ## 12. Security considerations
 
 * **Definitions, not behaviour.** A server can keep every definition and change what a tool does.
@@ -241,7 +291,8 @@ servers answer in an older protocol version, without `outputSchema`.
   earlier to differ from.
 * **Extras decide things too.** `annotations` such as `readOnlyHint` and `destructiveHint` decide
   in some clients whether a user is asked before a call. They are not contract members, so a flip
-  moves the extras digest and not the contract digest. A client that acts on extras compares both.
+  moves the extras digest and leaves the contract digest equal. Section 11.1 states the coverage
+  needed for approval.
 * **Wrongly typed contract members.** A `description` that is not a string and an `inputSchema`
   that is not an object are read as absent (section 4) and are not extras (section 8). A change
   from one such value to another moves neither digest.
@@ -257,16 +308,17 @@ servers answer in an older protocol version, without `outputSchema`.
 An implementation conforms when, for every vector in [`vectors/vectors.json`](vectors/vectors.json),
 it produces the vector's contract digest, extras digest and canonical texts, reports no extras
 digest where the vector has `null`, and reports that a digest cannot be computed where the vector
-says so. The file holds 68 vectors, among them the orderings, number forms and strings of
+says so. The file holds 73 vectors, among them the orderings, number forms and strings of
 sections 5 and 6, and pairs marked as equal or different.
 
 Three reference implementations with no dependencies are in
 [`implementations/`](implementations/): Python, JavaScript and Go. [`scripts/check.sh`](scripts/check.sh)
-runs them over the vectors.
+runs them over the vectors. CrawlCheck's SDKs implement it independently (Appendix A).
 
 ## Appendix A. Digests in use
 
-Named for comparison. None of these projects has reviewed this text.
+Named for comparison. Apart from CrawlCheck, whose author co-edits this draft, none of these
+projects has reviewed this text.
 
 **The same contract digest.** The contract digest of this document is what these compute:
 
@@ -275,14 +327,24 @@ Named for comparison. None of these projects has reviewed this text.
 | HISTOR, a public log of MCP tool definitions | tool-set digest of MTL/1.1, section 5 | 2026-10-31 (1.1) |
 | WARDEN, an MCP firewall | `mtlToolSetDigest` (`contractDigest`) | follows MTL/1.1 |
 | CrawlCheck, [mcp-lockfile](https://crawlcheck.io/spec/mcp-lockfile) | `jcs_v1.tools_sha256` | 2026-11-07 |
+| CrawlCheck SDKs and lockfile endpoint | `toolSetDigest` (JavaScript), `tool_set_digest` (Python), lockfile member `tool_set_digest` | 2026-11-13 |
 
-Checked for this draft on 2026-11-12: HISTOR's and WARDEN's code, each run over the 68 vectors,
+Checked for this draft on 2026-11-13: HISTOR's and WARDEN's code, each run over the 73 vectors,
 gives the contract digest and the refusals of every one (`scripts/cross_check_histor.py`,
 `scripts/cross_check_warden.mjs`). The reference implementation reproduces the five values in
 [CrawlCheck's lockfile examples](https://crawlcheck.io/spec/mcp-lockfile#jcs-v1), fetched directly on
 2026-11-12: the empty-list contract digest and the set and per-tool contract and extras digests for
 the `read_file` example in section 8. The five values cover these two inputs. They do not establish
 agreement on the full vector suite.
+
+**An independent implementation.** CrawlCheck's SDKs implement this definition, both digests and the
+refusals, apart from its bounded `jcs_v1` (section 8.1): `sdk/src/tsd.js` and
+`sdk-python/crawlcheck/tsd.py` in [emmanuelorta/crawlcheck-core](https://github.com/emmanuelorta/crawlcheck-core)
+at commit 7568d46. Run over the vectors on 2026-11-13, both give the digests, canonical texts and
+codes of all 70 vectors of the 2026-11-12 file. Of the three vectors added on 2026-11-13 for the
+order of codes (section 10), they agree on the two with `TSD-NAME`; on
+`lone-surrogate-before-bad-entry` they report `TSD-TEXT` for the contract digest where section 10
+gives `TSD-TOOL`.
 In [MCP Registry issue 82](https://github.com/modelcontextprotocol/registry/issues/82), CrawlCheck's
 author reported on 2026-11-07 that the contract digest, computed from his own reads of 30 registry
 servers, equalled HISTOR's published one on all 30. The daily comparison checks the contract digests
@@ -298,12 +360,12 @@ encoding, ordering or bounds. The daily comparison's inputs carry only the contr
 HISTOR's deployed `toolExtrasDigest` uses the bounded form of section 8.1 and a serialiser that
 differs from RFC 8785 for fractions and integral floats such as `1.0`, integers beyond 2^53, and member
 names outside the Basic Multilingual Plane (sorted by code point). `scripts/cross_check_histor.py`
-runs HISTOR's code over the vectors: of 68, the extras digest agrees on 55 and differs on 13, each of
+runs HISTOR's code over the vectors: of 73, the extras digest agrees on 57 and differs on 16, each of
 them one of those three cases or one of the limits of section 8.1. HISTOR's code since 2026-11-12 can
 also write the RFC 8785 form (its `rfc8785` extras scheme) and move every stored value to it in one
-step; under that scheme it agrees on 58 and differs on the 10 limits of section 8.1. Its public log
-still publishes the first form. A change to the public extras encoding is pending coordination
-with CrawlCheck.
+step; under that scheme it agrees on 60 and differs on the 13 vectors its limits of section 8.1
+change. Its public log still publishes the first form; CrawlCheck's author agreed to the change on
+2026-11-13.
 
 **Other constructions.** These cover other members or serialise differently, and give other
 values for the same list:
@@ -324,16 +386,18 @@ values for the same list:
 
 ## Appendix B. Open questions
 
-1. The limits of section 8.1: should the definition keep the extras digest total and unbounded, as
-   section 8 has it, or take the limits in?
-2. Two tools with one name that both have extras: no digest (section 8), or a rule that orders
-   them?
-3. Should a producer be required to refuse repeated member names when its parser can see them?
-4. Should the server's `instructions` and `serverInfo` have a digest of their own? A model reads
+1. Should a producer be required to refuse repeated member names when its parser can see them?
+2. Should the server's `instructions` and `serverInfo` have a digest of their own? A model reads
    them too, and they are outside the tool set.
-5. A `_meta` key or a registry field under which a publisher or a registry states the digests it
+3. A `_meta` key or a registry field under which a publisher or a registry states the digests it
    expects, and how a client should treat a difference.
 
 ## Change log
 
+* 2026-11-13: second editor (Emmanuel Orta, CrawlCheck). Two open questions settled with
+  CrawlCheck: the limits of section 8.1 describe storage, and a bounded value is labelled and not
+  presented as the extras digest; two tools with one name that both have extras give no extras
+  digest, and the shared name SHOULD be reported. Section 10 orders the codes when several apply,
+  a question CrawlCheck raised while implementing it; three vectors added for that (73).
+  CrawlCheck's SDKs added to Appendix A.
 * 2026-11-12: first draft.
