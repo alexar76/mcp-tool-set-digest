@@ -16,11 +16,14 @@ import base64
 import hashlib
 import json
 import math
+import re
 import sys
 from typing import Any
 
 CONTRACT_MEMBERS = ("name", "description", "inputSchema", "outputSchema")
 MAX_SAFE_INTEGER = 2**53 - 1
+MAX_LEVEL = 512                 # section 12: the tools array is level 1, a tool level 2
+WRAPPER_LEVELS = 2              # a JSON-RPC response and its result can wrap the tools array
 
 
 class DigestError(Exception):
@@ -33,12 +36,60 @@ class DigestError(Exception):
 
 # --- parsing (section 3) ------------------------------------------------------------------------
 
+# A string token (so brackets inside strings are skipped) or a bracket.
+_TOKEN = re.compile(r'"[^"\\]*(?:\\.[^"\\]*)*"|[\[\]{}]', re.S)
+_CLOSER = {"[": "]", "{": "}"}
+
+
+def cut_deep(text: str, limit: int = MAX_LEVEL + WRAPPER_LEVELS) -> str:
+    """The text with every array or object nested deeper than ``limit`` (counting the outermost
+    value as 1) replaced by an empty one of the same kind.
+
+    Nothing deeper than level 512 can reach a digest (section 12: a digest that would cover it
+    gives TSD-DEPTH), and a replaced container keeps its kind and its level, so every answer stays
+    what it would have been. The replacement keeps the parser out of deep recursion; JSON text with
+    mismatched brackets is refused here, as the parser would refuse it.
+    """
+    depth = 0
+    pieces: list[str] = []
+    last = 0
+    tokens = _TOKEN.finditer(text)
+    for token in tokens:
+        mark = token.group()
+        if mark[0] == '"':
+            continue
+        if mark in _CLOSER:
+            depth += 1
+            if depth <= limit:
+                continue
+            start, closers = token.start(), [_CLOSER[mark]]
+            for inner in tokens:
+                found = inner.group()
+                if found[0] == '"':
+                    continue
+                if found in _CLOSER:
+                    closers.append(_CLOSER[found])
+                elif closers.pop() != found:
+                    raise json.JSONDecodeError("brackets do not match", text, inner.start())
+                if not closers:
+                    break
+            else:
+                raise json.JSONDecodeError("a nested value is not closed", text, start)
+            pieces += [text[last:start], "[]" if mark == "[" else "{}"]
+            last = inner.end()
+            depth -= 1
+        else:
+            depth -= 1
+    return text if not pieces else "".join(pieces) + text[last:]
+
+
 def parse(text: str) -> Any:
     """JSON text to values, every number an IEEE 754 double or an exact integer inside 2^53.
 
     A literal too large for a double (``1e400``) parses to infinity and is refused when a digest
     that covers it is computed, not here: the contract digest of a set does not depend on what a
-    member outside the contract holds.
+    member outside the contract holds. Arrays and objects deeper than any digest can cover are
+    read as empty (``cut_deep``).
     """
     def number(literal: str) -> Any:
         if "." not in literal and "e" not in literal and "E" not in literal:
@@ -47,7 +98,7 @@ def parse(text: str) -> Any:
                 return value
         return float(literal)               # correctly rounded: nearest double, ties to even
 
-    return json.loads(text, parse_float=number, parse_int=number)
+    return json.loads(cut_deep(text), parse_float=number, parse_int=number)
 
 
 # --- canonical form (section 6): RFC 8785 ---------------------------------------------------------
@@ -88,7 +139,7 @@ def _string(text: str) -> str:
     return json.dumps(text, ensure_ascii=False)
 
 
-def canonical(value: Any) -> str:
+def _scalar(value: Any) -> str:
     if value is None:
         return "null"
     if value is True:
@@ -103,12 +154,57 @@ def canonical(value: Any) -> str:
         return es_number(value)
     if isinstance(value, str):
         return _string(value)
-    if isinstance(value, list):
-        return "[" + ",".join(canonical(item) for item in value) + "]"
-    if isinstance(value, dict):
-        return "{" + ",".join(_string(key) + ":" + canonical(value[key])
-                              for key in sorted(value, key=utf16_key)) + "}"
     raise TypeError(f"{type(value).__name__} is not a JSON value")
+
+
+def canonical(value: Any) -> str:
+    """RFC 8785 text of a value, written with an explicit stack so that depth costs no recursion."""
+    out: list[str] = []
+    stack: list[tuple[bool, Any]] = [(False, value)]     # (is literal text, item)
+    while stack:
+        literal, item = stack.pop()
+        if literal:
+            out.append(item)
+        elif isinstance(item, list):
+            out.append("[")
+            stack.append((True, "]"))
+            for index in range(len(item) - 1, -1, -1):
+                stack.append((False, item[index]))
+                if index:
+                    stack.append((True, ","))
+        elif isinstance(item, dict):
+            out.append("{")
+            stack.append((True, "}"))
+            keys = sorted(item, key=utf16_key)
+            for index in range(len(keys) - 1, -1, -1):
+                stack.append((False, item[keys[index]]))
+                stack.append((True, _string(keys[index]) + ":"))
+                if index:
+                    stack.append((True, ","))
+        else:
+            out.append(_scalar(item))
+    return "".join(out)
+
+
+def deeper_than(value: Any, level: int, limit: int = MAX_LEVEL) -> bool:
+    """Whether an array or object inside ``value`` (itself at ``level``) sits deeper than ``limit``."""
+    stack = [(value, level)]
+    while stack:
+        item, at = stack.pop()
+        if at > limit:
+            return True
+        for child in (item.values() if isinstance(item, dict) else item):
+            if isinstance(child, (dict, list)):
+                stack.append((child, at + 1))
+    return False
+
+
+def _check_depth(projections: list[tuple[str, dict[str, Any]]]) -> None:
+    """Section 12: each projection is a tool's contract entry or its extras, read at level 2 (the
+    tool's own level), so the values of its members are at level 3."""
+    for name, projection in projections:
+        if deeper_than(projection, 2):
+            raise DigestError("TSD-DEPTH", f"a value of tool {name!r} is nested deeper than level {MAX_LEVEL}")
 
 
 # --- the two digests (sections 4 to 8) ------------------------------------------------------------
@@ -158,7 +254,9 @@ def tools_of(value: Any) -> list[Any]:
 
 def contract(tools: list[Any]) -> tuple[str, str]:
     """``(digest, canonical text)`` of the contract digest."""
-    return digest_of([contract_entry(tool) for tool in tools])
+    entries = [contract_entry(tool) for tool in tools]
+    _check_depth([(entry["name"], entry) for entry in entries])
+    return digest_of(entries)
 
 
 def extras_object(tools: list[Any]) -> dict[str, Any] | None:
@@ -181,6 +279,7 @@ def extras(tools: list[Any]) -> tuple[str | None, str | None]:
     body = extras_object(tools)
     if body is None:
         return None, None
+    _check_depth(list(body["tools"].items()))
     text = canonical(body)
     return "sha256-" + base64.b64encode(hashlib.sha256(text.encode("utf-8")).digest()).decode("ascii"), text
 

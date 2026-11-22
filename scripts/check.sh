@@ -49,6 +49,9 @@ check_pagination node implementations/javascript/tool-set-digest.mjs
 (cd implementations/go && check_pagination go run .)
 echo "command lines reject partial pages"
 
+# Section 12: the depth floor, the same answer from the three readers, no crash at 100,000 levels.
+python3 scripts/check_depth.py
+
 # The example printed in README.md is what the implementation prints.
 readme=$(printf '%s' '[{"name": "read_file", "title": "Read file", "description": "Read a file from disk.", "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}, "annotations": {"readOnlyHint": true}}]' | python3 implementations/python/tool_set_digest.py)
 grep -qF -- "$readme" README.md || { echo "README.md shows another output than: $readme"; exit 1; }

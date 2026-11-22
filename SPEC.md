@@ -1,6 +1,6 @@
 # MCP tool-set digest, version 1
 
-Identifier: `mcp-tool-set-digest/1` · Editors' draft, 2026-11-13 · Text: CC BY 4.0 · Code and vectors: Apache-2.0 OR MIT
+Identifier: `mcp-tool-set-digest/1` · Editors' draft, 2026-11-22 · Text: CC BY 4.0 · Code and vectors: Apache-2.0 OR MIT
 
 Editors: Aleksandr Artamokhov (HISTOR), Emmanuel Orta (CrawlCheck)
 
@@ -216,13 +216,15 @@ and `b08036e71687b7855244656f049eec719c13c214eb9575731f118331e565cb3c`.
 | `TSD-NUMBER` | a member holds a number with no IEEE 754 double | the digest that covers that member |
 | `TSD-TEXT` | a member holds a string, or a member name, with an unpaired surrogate | the digest that covers that member |
 | `TSD-NAME` | two tools share a name and both have extras | the extras digest |
+| `TSD-DEPTH` | an array or object the digest covers is nested deeper than level 512 (section 12) | the digest that covers it |
 
 A producer that meets one of these MUST NOT publish that digest for the set and SHOULD publish the
 code, with the tool's name when it has one.
 
 When more than one code applies to the same digest, a producer reports the first of `TSD-PAGE`,
 `TSD-TOOL` and `TSD-NAME` that applies; these concern the set and can be found without writing any
-value. Between `TSD-NUMBER` and `TSD-TEXT` either conforms, and the vectors hold no set where both
+value. `TSD-DEPTH` comes next: it too is found without writing a value. Between `TSD-NUMBER` and
+`TSD-TEXT` either conforms, and the vectors hold no set where both
 apply to one digest. A producer MAY report the other codes as well. Which code is reported does not
 change a comparison (section 11). It MUST NOT skip the tool, repair the value or digest
 the rest. A comparison with a set whose digest could not be computed has no result; it is not a
@@ -300,8 +302,17 @@ construction that puts the profile identifier into the hashed bytes uses a diffe
   digest held by a public record says what the record was served. Comparing a client's own digest
   with it is the check; trusting the record's digest in place of one's own is not.
 * **A digest is not a signature.** It says two lists are the same, not who published either.
-* **Size.** A producer SHOULD bound the size of a list and the depth of nesting it accepts before
-  parsing.
+* **Size.** A producer SHOULD bound the size of a list it accepts before parsing.
+* **Depth.** Every array and object has a level: the tools array is level 1, a tool level 2, an array
+  or object held by a member of a tool level 3, and each array or object inside it one more. Levels
+  are counted from the tools array whatever wraps it (a `tools/list` result, a JSON-RPC response).
+  A reader MUST accept every level up to 512. A digest that would cover an array or object at level
+  513 or deeper cannot be computed (`TSD-DEPTH`); the other digest is computed as usual. A value the
+  contract entry does not carry, such as a `description` that is not a string (section 4), is not
+  counted. On deeper input a reader MUST NOT crash, stop on a resource limit or truncate; it need not
+  build anything past level 512, and reading such an array or object as an empty one of the same
+  kind changes no answer. The floor is fixed so that readers agree: a bound of each reader's own
+  would give different answers on the same deep list.
 
 ## 13. Conformance
 
@@ -394,6 +405,12 @@ values for the same list:
 
 ## Change log
 
+* 2026-11-22: section 12 gains the depth rule and section 10 the code `TSD-DEPTH`, as proposed by
+  Emmanuel Orta (CrawlCheck) on alexar76/mcp-tool-set-digest#1 after bcrypto0 reported that the text
+  named no bound. The three reference implementations follow it (`scripts/check_depth.py`: the edges
+  509/510 under `inputSchema.x`, 510/511 for an extra, 100,000 levels, wrapped inputs); before, the
+  Python one crashed from about 330 levels, the JavaScript one at 100,000, and the Go one refused
+  past 512 levels of the whole input, so a wrapper moved its edge. No vector changed.
 * 2026-11-13: second editor (Emmanuel Orta, CrawlCheck). Two open questions settled with
   CrawlCheck: the limits of section 8.1 describe storage, and a bounded value is labelled and not
   presented as the extras digest; two tools with one name that both have extras give no extras

@@ -42,7 +42,7 @@ func Parse(text []byte) (any, error) {
 		return nil, &DigestError{"TSD-TEXT", "the input is not valid UTF-8"}
 	}
 	r := &reader{text: text}
-	value, err := r.value(0)
+	value, err := r.value(1)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,15 @@ func Parse(text []byte) (any, error) {
 	return value, nil
 }
 
-const maxDepth = 512
+// MaxLevel is the deepest level a reader must accept (section 12): the tools array is level 1, a
+// tool level 2, an array or object held by a member of a tool level 3.
+const MaxLevel = 512
+
+// wrapperLevels: a JSON-RPC response and its result can wrap the tools array. The reader builds no
+// array or object deeper than MaxLevel+wrapperLevels: nothing that deep can reach a digest (a digest
+// that would cover it gives TSD-DEPTH), so such a container is read as an empty one of the same kind,
+// which keeps its level and every answer.
+const wrapperLevels = 2
 
 type reader struct {
 	text []byte
@@ -68,13 +76,51 @@ func (r *reader) space() {
 	}
 }
 
-func (r *reader) value(depth int) (any, error) {
-	if depth > maxDepth {
-		return nil, r.fail("nested too deep")
+// skip passes over the array or object that starts at r.at without building it, checking only
+// that its brackets match; strings are passed over whole, so brackets inside them do not count.
+func (r *reader) skip() error {
+	var closers []byte
+	for r.at < len(r.text) {
+		switch c := r.text[r.at]; c {
+		case '"':
+			if _, err := r.str(); err != nil {
+				return err
+			}
+			continue
+		case '[':
+			closers = append(closers, ']')
+		case '{':
+			closers = append(closers, '}')
+		case ']', '}':
+			if len(closers) == 0 || closers[len(closers)-1] != c {
+				return r.fail("brackets do not match")
+			}
+			closers = closers[:len(closers)-1]
+			if len(closers) == 0 {
+				r.at++
+				return nil
+			}
+		}
+		r.at++
 	}
+	return r.fail("a nested value is not closed")
+}
+
+// value reads one JSON value; level is the level an array or object read here has (the outermost
+// value is 1).
+func (r *reader) value(level int) (any, error) {
 	r.space()
 	if r.at >= len(r.text) {
 		return nil, r.fail("the text ends early")
+	}
+	if c := r.text[r.at]; (c == '[' || c == '{') && level > MaxLevel+wrapperLevels {
+		if err := r.skip(); err != nil {
+			return nil, err
+		}
+		if c == '[' {
+			return []any{}, nil
+		}
+		return map[string]any{}, nil
 	}
 	switch c := r.text[r.at]; {
 	case c == '{':
@@ -98,7 +144,7 @@ func (r *reader) value(depth int) (any, error) {
 				return nil, r.fail("a colon is expected")
 			}
 			r.at++
-			member, err := r.value(depth + 1)
+			member, err := r.value(level + 1)
 			if err != nil {
 				return nil, err
 			}
@@ -123,7 +169,7 @@ func (r *reader) value(depth int) (any, error) {
 				r.at++
 				return array, nil
 			}
-			item, err := r.value(depth + 1)
+			item, err := r.value(level + 1)
 			if err != nil {
 				return nil, err
 			}
@@ -442,6 +488,49 @@ func ToolsOf(value any) ([]any, error) {
 	return nil, &DigestError{"TSD-TOOL", "the input holds no tools array"}
 }
 
+// deeperThan reports whether an array or object inside value (itself at level) sits deeper than
+// MaxLevel. It walks with an explicit stack.
+func deeperThan(value any, level int) bool {
+	type item struct {
+		value any
+		level int
+	}
+	stack := []item{{value, level}}
+	for len(stack) > 0 {
+		top := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		if top.level > MaxLevel {
+			return true
+		}
+		switch v := top.value.(type) {
+		case map[string]any:
+			for _, child := range v {
+				switch child.(type) {
+				case map[string]any, []any:
+					stack = append(stack, item{child, top.level + 1})
+				}
+			}
+		case []any:
+			for _, child := range v {
+				switch child.(type) {
+				case map[string]any, []any:
+					stack = append(stack, item{child, top.level + 1})
+				}
+			}
+		}
+	}
+	return false
+}
+
+// checkDepth applies section 12 to a tool's contract entry or its extras, read at level 2 (the
+// tool's own level), so the values of its members are at level 3.
+func checkDepth(name string, projection map[string]any) error {
+	if deeperThan(projection, 2) {
+		return &DigestError{"TSD-DEPTH", "a value of tool " + strconv.Quote(name) + " is nested deeper than level " + strconv.Itoa(MaxLevel)}
+	}
+	return nil
+}
+
 // Contract is the contract digest of a tools array.
 func Contract(tools []any) (Digest, error) {
 	entries := make([]map[string]any, len(tools))
@@ -451,6 +540,11 @@ func Contract(tools []any) (Digest, error) {
 			return Digest{}, err
 		}
 		entries[i] = entry
+	}
+	for _, entry := range entries {
+		if err := checkDepth(entry["name"].(string), entry); err != nil {
+			return Digest{}, err
+		}
 	}
 	return digestOf(entries)
 }
@@ -493,6 +587,16 @@ func Extras(tools []any) (digest Digest, ok bool, err error) {
 	body, err := ExtrasObject(tools)
 	if err != nil || body == nil {
 		return Digest{}, false, err
+	}
+	names := make([]string, 0, len(body["tools"].(map[string]any)))
+	for name := range body["tools"].(map[string]any) {
+		names = append(names, name)
+	}
+	sort.Strings(names) // the same tool is named whatever order the map iterates in
+	for _, name := range names {
+		if err := checkDepth(name, body["tools"].(map[string]any)[name].(map[string]any)); err != nil {
+			return Digest{}, false, err
+		}
 	}
 	text, err := Canonical(body)
 	if err != nil {

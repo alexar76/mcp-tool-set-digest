@@ -21,11 +21,80 @@ export class DigestError extends Error {
 
 // --- parsing (section 3) -------------------------------------------------------------------------
 
+export const MAX_LEVEL = 512;        // section 12: the tools array is level 1, a tool level 2
+const WRAPPER_LEVELS = 2;             // a JSON-RPC response and its result can wrap the tools array
+// A string token (so brackets inside strings are skipped) or a bracket.
+const TOKEN = /"[^"\\]*(?:\\.[^"\\]*)*"|[[\]{}]/gs;
+/** @type {Record<string, string>} */
+const CLOSER = { '[': ']', '{': '}' };
+
+/** The text with every array or object nested deeper than `limit` (counting the outermost value
+ * as 1) replaced by an empty one of the same kind. Nothing deeper than level 512 can reach a digest
+ * (section 12: a digest that would cover it gives TSD-DEPTH), and a replaced container keeps its
+ * kind and its level, so every answer stays what it would have been. It keeps the parser and the
+ * writer out of deep recursion; mismatched brackets are refused as JSON.parse would refuse them.
+ * @param {string} text @param {number} [limit] */
+export function cutDeep(text, limit = MAX_LEVEL + WRAPPER_LEVELS) {
+  let depth = 0, last = 0;
+  /** @type {string[]} */
+  const pieces = [];
+  const tokens = text.matchAll(TOKEN);
+  for (const token of tokens) {
+    const mark = token[0];
+    if (mark[0] === '"') continue;
+    if (mark === '[' || mark === '{') {
+      if (++depth <= limit) continue;
+      const start = /** @type {number} */ (token.index);
+      const closers = [CLOSER[mark]];
+      let end = -1;
+      for (const inner of tokens) {
+        const found = inner[0];
+        if (found[0] === '"') continue;
+        if (found === '[' || found === '{') closers.push(CLOSER[found]);
+        else if (closers.pop() !== found) throw new SyntaxError(`brackets do not match at ${inner.index}`);
+        if (!closers.length) { end = /** @type {number} */ (inner.index) + 1; break; }
+      }
+      if (end < 0) throw new SyntaxError(`a nested value is not closed at ${start}`);
+      pieces.push(text.slice(last, start), mark === '[' ? '[]' : '{}');
+      last = end;
+      depth--;
+    } else depth--;
+  }
+  return pieces.length ? pieces.join('') + text.slice(last) : text;
+}
+
 /** JSON text to values. JSON.parse already reads every number as the nearest IEEE 754 double; a
  * literal too large for one (1e400) becomes Infinity and is refused when a digest that covers it
- * is computed, so a member outside the contract cannot take the contract digest away.
+ * is computed, so a member outside the contract cannot take the contract digest away. Arrays and
+ * objects deeper than any digest can cover are read as empty (cutDeep).
  * @param {string} text @returns {unknown} */
-export const parse = (text) => JSON.parse(text);
+export const parse = (text) => JSON.parse(cutDeep(text));
+
+/** Whether an array or object inside `value` (itself at `level`) sits deeper than `limit`.
+ * @param {unknown} value @param {number} level @param {number} [limit] */
+export function deeperThan(value, level, limit = MAX_LEVEL) {
+  /** @type {[unknown, number][]} */
+  const stack = [[value, level]];
+  while (stack.length) {
+    const [item, at] = /** @type {[unknown, number]} */ (stack.pop());
+    if (at > limit) return true;
+    for (const child of Object.values(/** @type {object} */ (item))) {
+      if (child && typeof child === 'object') stack.push([child, at + 1]);
+    }
+  }
+  return false;
+}
+
+/** Section 12: each projection is a tool's contract entry or its extras, read at level 2 (the tool's
+ * own level), so the values of its members are at level 3.
+ * @param {[string, object][]} projections */
+function checkDepth(projections) {
+  for (const [name, projection] of projections) {
+    if (deeperThan(projection, 2)) {
+      throw new DigestError('TSD-DEPTH', `a value of tool ${JSON.stringify(name)} is nested deeper than level ${MAX_LEVEL}`);
+    }
+  }
+}
 
 // --- canonical form (section 6): RFC 8785 --------------------------------------------------------
 
@@ -114,7 +183,11 @@ export function toolsOf(value) {
 const CONTRACT_MEMBERS = new Set(['name', 'description', 'inputSchema', 'outputSchema']);
 
 /** @param {unknown[]} tools */
-export const contract = (tools) => digestOf(tools.map(contractEntry));
+export function contract(tools) {
+  const entries = tools.map(contractEntry);
+  checkDepth(entries.map((entry) => [/** @type {string} */ (entry.name), entry]));
+  return digestOf(entries);
+}
 
 /** `{"tools": {name: extras}}` for the tools that carry a member outside the contract, or null
  * when none does (section 8).
@@ -142,6 +215,7 @@ export function extrasObject(tools) {
 export function extras(tools) {
   const body = extrasObject(tools);
   if (!body) return { digest: null };
+  checkDepth(Object.entries(body.tools));
   const text = canonical(body);
   return { digest: 'sha256-' + createHash('sha256').update(text, 'utf8').digest('base64'), canonical: text };
 }
