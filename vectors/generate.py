@@ -28,6 +28,10 @@ NUMBERS_CANONICAL = (r'{"minimum":1,"maximum":100,"multipleOf":0.5,"default":0,"
                      r'"c":0.000001,"d":123456789012345680000,"e":9007199254740992,"f":0.30000000000000004,'
                      r'"g":1.5e+300,"h":-2.5,"i":5e-324,"j":1.7976931348623157e+308,"k":100,"l":100,"m":1}')
 
+def _nest(n: int) -> str:
+    return "[" * n + "0" + "]" * n
+
+
 # (id, what it shows, tools as JSON text[, the contract digest's error | {"extras": error}])
 CASES: list[tuple] = [
     # --- the set ---
@@ -108,6 +112,22 @@ CASES: list[tuple] = [
     ("number-overflow-negative", "Neither has -1e400.", r'[{"name":"n","inputSchema":{"minimum":-1e400}}]', "TSD-NUMBER"),
     ("number-overflow-in-extras", "A number with no double outside the contract members: the contract digest stands, the extras digest cannot be computed.",
      r'[{"name":"n","_meta":{"limit":1e999}}]', {"extras": "TSD-NUMBER"}),
+    # --- depth (section 12): the tools array is level 1, a tool level 2, a member's value level 3 ---
+    ("depth-contract-509", "An array nested 509 deep under inputSchema.x reaches level 512: the deepest a reader accepts.",
+     '[{"name":"t","inputSchema":{"x":%s}}]' % _nest(509)),
+    ("depth-contract-510", "One level more under inputSchema.x reaches 513: the contract digest cannot be computed.",
+     '[{"name":"t","inputSchema":{"x":%s}}]' % _nest(510), "TSD-DEPTH"),
+    ("depth-extras-510", "An array nested 510 deep in a member outside the contract reaches level 512.",
+     '[{"name":"t","x":%s}]' % _nest(510)),
+    ("depth-extras-511", "One level more in that member: the extras digest cannot be computed, the contract digest stands.",
+     '[{"name":"t","x":%s}]' % _nest(511), {"extras": "TSD-DEPTH"}),
+    ("depth-description-600", "A description that is an array nested 600 deep is not a string, so it counts as none and reaches neither digest: no TSD-DEPTH.",
+     '[{"name":"t","description":%s,"inputSchema":{"type":"object"}}]' % _nest(600)),
+    # --- a number with no double where no digest reads it ---
+    ("description-number-overflow", "description 1e400 is not a string, so it counts as none and reaches neither digest: no TSD-NUMBER.",
+     r'[{"name":"t","description":1e400,"inputSchema":{"type":"object"}}]'),
+    ("extras-number-overflow-1e400", "1e400 in a member outside the contract: the contract digest stands, the extras digest cannot be computed.",
+     r'[{"name":"t","x":1e400}]', {"extras": "TSD-NUMBER"}),
     # --- strings ---
     ("string-escapes", "Every escape JSON has, and characters JSON.stringify leaves alone (U+007F, U+2028, U+2029).",
      r'[{"name":"s","description":"quote \" backslash \\ slash \/ \b\f\n\r\t nul \u0000 unit \u001f del \u007f ls   ps   astral 😀 end"}]'),
@@ -173,6 +193,7 @@ CASES: list[tuple] = [
 
 # (first id, second id, which digest) that must be equal / must differ
 EQUAL = [
+    ("description-absent", "depth-description-600", "contract"), ("description-absent", "description-number-overflow", "contract"),
     ("typical", "typical-reordered", "contract"), ("typical", "typical-whitespace", "contract"),
     ("description-absent", "description-null", "contract"), ("description-absent", "description-number", "contract"),
     ("description-absent", "description-empty", "contract"),
@@ -202,6 +223,7 @@ DIFFER = [
 ]
 # Vectors whose extras digest is absent: no tool carries a member outside the contract.
 NO_EXTRAS = ["empty", "one-minimal", "typical", "description-null", "description-number", "input-schema-array",
+             "depth-contract-509", "depth-contract-510", "depth-description-600", "description-number-overflow",
              "output-schema-null", "extras-none", "duplicate-names", "extras-wrongly-typed-contract-members"]
 
 
