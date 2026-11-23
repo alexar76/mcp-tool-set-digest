@@ -245,6 +245,8 @@ def tools_of(value: Any) -> list[Any]:
         return value
     if isinstance(value, dict):
         for result in (value, value.get("result")):
+            if isinstance(result, dict) and "tools" in result and "result" in result:
+                raise DigestError("TSD-TOOL", "an object holds both tools and result (section 3)")
             if isinstance(result, dict) and isinstance(result.get("tools"), list):
                 if "nextCursor" in result:
                     raise DigestError("TSD-PAGE", "collect all pages and pass the joined tools array")

@@ -951,6 +951,164 @@
       }
     },
     {
+      "id": "repeated-member-description",
+      "note": "A member name repeated in a tool object: the last value is the one read (section 3.4). Equal to the same tool with only the last description.",
+      "tools": "[{\"name\":\"a\",\"description\":\"first\",\"description\":\"second\"}]",
+      "contract": {
+        "digest": "sha256-XOe1hlcbKMVTZxciLmHmlB/BiBjaZsaI93WGS1QQHv0=",
+        "hex": "sha256:5ce7b586571b28c5536717222e61e6941fc18818da66c688f775864b54101efd",
+        "canonical": "[{\"description\":\"second\",\"inputSchema\":{},\"name\":\"a\"}]"
+      },
+      "extras": {
+        "digest": null
+      }
+    },
+    {
+      "id": "repeated-member-description-once",
+      "note": "The tool of repeated-member-description written with only its last description.",
+      "tools": "[{\"name\":\"a\",\"description\":\"second\"}]",
+      "contract": {
+        "digest": "sha256-XOe1hlcbKMVTZxciLmHmlB/BiBjaZsaI93WGS1QQHv0=",
+        "hex": "sha256:5ce7b586571b28c5536717222e61e6941fc18818da66c688f775864b54101efd",
+        "canonical": "[{\"description\":\"second\",\"inputSchema\":{},\"name\":\"a\"}]"
+      },
+      "extras": {
+        "digest": null
+      }
+    },
+    {
+      "id": "repeated-member-name-last-valid",
+      "note": "name repeated, the first empty and the last valid: the last is read, so the tool is valid.",
+      "tools": "[{\"name\":\"\",\"name\":\"a\"}]",
+      "contract": {
+        "digest": "sha256-mJLo0lgIeJfnpcEC1nxqVm59cRh0urbq1nAY+yhtLLQ=",
+        "hex": "sha256:9892e8d258087897e7a5c102d67c6a566e7d711874bab6ead67018fb286d2cb4",
+        "canonical": "[{\"description\":\"\",\"inputSchema\":{},\"name\":\"a\"}]"
+      },
+      "extras": {
+        "digest": null
+      }
+    },
+    {
+      "id": "repeated-member-name-last-empty",
+      "note": "name repeated, the first valid and the last empty: the last is read, so the entry has no name and TSD-TOOL applies to both digests.",
+      "tools": "[{\"name\":\"a\",\"name\":\"\"}]",
+      "contract": {
+        "error": "TSD-TOOL"
+      },
+      "extras": {
+        "error": "TSD-TOOL"
+      }
+    },
+    {
+      "id": "repeated-member-in-schema",
+      "note": "A member name repeated inside inputSchema: the last value is read at every depth.",
+      "tools": "[{\"name\":\"t\",\"inputSchema\":{\"type\":\"object\",\"type\":\"string\"}}]",
+      "contract": {
+        "digest": "sha256-U9uO0mNv5x0me5rWd7Sq5PACLUxnPMplEL0TGr4aWQE=",
+        "hex": "sha256:53db8ed2636fe71d267b9ad677b4aae4f0022d4c673cca6510bd131abe1a5901",
+        "canonical": "[{\"description\":\"\",\"inputSchema\":{\"type\":\"string\"},\"name\":\"t\"}]"
+      },
+      "extras": {
+        "digest": null
+      }
+    },
+    {
+      "id": "repeated-member-in-schema-once",
+      "note": "The tool of repeated-member-in-schema written with only the last type.",
+      "tools": "[{\"name\":\"t\",\"inputSchema\":{\"type\":\"string\"}}]",
+      "contract": {
+        "digest": "sha256-U9uO0mNv5x0me5rWd7Sq5PACLUxnPMplEL0TGr4aWQE=",
+        "hex": "sha256:53db8ed2636fe71d267b9ad677b4aae4f0022d4c673cca6510bd131abe1a5901",
+        "canonical": "[{\"description\":\"\",\"inputSchema\":{\"type\":\"string\"},\"name\":\"t\"}]"
+      },
+      "extras": {
+        "digest": null
+      }
+    },
+    {
+      "id": "repeated-member-extras",
+      "note": "A member outside the contract repeated: the contract digest is that of the tool without it, and the extras digest uses the last value.",
+      "tools": "[{\"name\":\"t\",\"title\":\"A\",\"title\":\"B\"}]",
+      "contract": {
+        "digest": "sha256-88Wu+RBqslXnbKusDxk1TtLT0D2iT/d07h7ia5bzX2U=",
+        "hex": "sha256:f3c5aef9106ab255e76cabac0f19354ed2d3d03da24ff774ee1ee26b96f35f65",
+        "canonical": "[{\"description\":\"\",\"inputSchema\":{},\"name\":\"t\"}]"
+      },
+      "extras": {
+        "digest": "sha256-QRW2sBJs3HC0zgeSV+0sHB+cq5GCecivqY17lgpyfIU=",
+        "hex": "sha256:4115b6b0126cdc70b4ce079257ed2c1c1f9cab918279c8afa98d7b960a727c85",
+        "canonical": "{\"tools\":{\"t\":{\"title\":\"B\"}}}"
+      }
+    },
+    {
+      "id": "repeated-member-extras-once",
+      "note": "The tool of repeated-member-extras written with only the last title.",
+      "tools": "[{\"name\":\"t\",\"title\":\"B\"}]",
+      "contract": {
+        "digest": "sha256-88Wu+RBqslXnbKusDxk1TtLT0D2iT/d07h7ia5bzX2U=",
+        "hex": "sha256:f3c5aef9106ab255e76cabac0f19354ed2d3d03da24ff774ee1ee26b96f35f65",
+        "canonical": "[{\"description\":\"\",\"inputSchema\":{},\"name\":\"t\"}]"
+      },
+      "extras": {
+        "digest": "sha256-QRW2sBJs3HC0zgeSV+0sHB+cq5GCecivqY17lgpyfIU=",
+        "hex": "sha256:4115b6b0126cdc70b4ce079257ed2c1c1f9cab918279c8afa98d7b960a727c85",
+        "canonical": "{\"tools\":{\"t\":{\"title\":\"B\"}}}"
+      }
+    },
+    {
+      "id": "repeated-member-escaped-name",
+      "note": "The same member name written once plainly and once with an escape is one name after parsing: the last value is read.",
+      "tools": "[{\"name\":\"a\",\"description\":\"x\",\"descr\\u0069ption\":\"y\"}]",
+      "contract": {
+        "digest": "sha256-P5p4dc53Hv8MIAYDP/BTOFLbRo3UhQ4JBCGWksfiEYw=",
+        "hex": "sha256:3f9a7875ce771eff0c2006033ff0533852db468dd4850e0904219692c7e2118c",
+        "canonical": "[{\"description\":\"y\",\"inputSchema\":{},\"name\":\"a\"}]"
+      },
+      "extras": {
+        "digest": null
+      }
+    },
+    {
+      "id": "repeated-member-escaped-name-once",
+      "note": "The tool of repeated-member-escaped-name written with only the last description.",
+      "tools": "[{\"name\":\"a\",\"description\":\"y\"}]",
+      "contract": {
+        "digest": "sha256-P5p4dc53Hv8MIAYDP/BTOFLbRo3UhQ4JBCGWksfiEYw=",
+        "hex": "sha256:3f9a7875ce771eff0c2006033ff0533852db468dd4850e0904219692c7e2118c",
+        "canonical": "[{\"description\":\"y\",\"inputSchema\":{},\"name\":\"a\"}]"
+      },
+      "extras": {
+        "digest": null
+      }
+    },
+    {
+      "id": "repeated-member-type-change",
+      "note": "description repeated, a string first and a number last: the last is read, it is not a string, so the description counts as none.",
+      "tools": "[{\"name\":\"a\",\"description\":\"text\",\"description\":7}]",
+      "contract": {
+        "digest": "sha256-mJLo0lgIeJfnpcEC1nxqVm59cRh0urbq1nAY+yhtLLQ=",
+        "hex": "sha256:9892e8d258087897e7a5c102d67c6a566e7d711874bab6ead67018fb286d2cb4",
+        "canonical": "[{\"description\":\"\",\"inputSchema\":{},\"name\":\"a\"}]"
+      },
+      "extras": {
+        "digest": null
+      }
+    },
+    {
+      "id": "repeated-member-name-once",
+      "note": "A tool named a with nothing else: what repeated-member-name-last-valid and repeated-member-type-change read.",
+      "tools": "[{\"name\":\"a\"}]",
+      "contract": {
+        "digest": "sha256-mJLo0lgIeJfnpcEC1nxqVm59cRh0urbq1nAY+yhtLLQ=",
+        "hex": "sha256:9892e8d258087897e7a5c102d67c6a566e7d711874bab6ead67018fb286d2cb4",
+        "canonical": "[{\"description\":\"\",\"inputSchema\":{},\"name\":\"a\"}]"
+      },
+      "extras": {
+        "digest": null
+      }
+    },
+    {
       "id": "tool-is-string",
       "note": "An entry that is not an object.",
       "tools": "[\"ping\"]",
@@ -1205,6 +1363,55 @@
       "ids": [
         "string-escaped-a",
         "string-raw-a"
+      ],
+      "digest": "contract"
+    },
+    {
+      "ids": [
+        "repeated-member-description",
+        "repeated-member-description-once"
+      ],
+      "digest": "contract"
+    },
+    {
+      "ids": [
+        "repeated-member-name-last-valid",
+        "repeated-member-name-once"
+      ],
+      "digest": "contract"
+    },
+    {
+      "ids": [
+        "repeated-member-in-schema",
+        "repeated-member-in-schema-once"
+      ],
+      "digest": "contract"
+    },
+    {
+      "ids": [
+        "repeated-member-extras",
+        "repeated-member-extras-once"
+      ],
+      "digest": "contract"
+    },
+    {
+      "ids": [
+        "repeated-member-extras",
+        "repeated-member-extras-once"
+      ],
+      "digest": "extras"
+    },
+    {
+      "ids": [
+        "repeated-member-escaped-name",
+        "repeated-member-escaped-name-once"
+      ],
+      "digest": "contract"
+    },
+    {
+      "ids": [
+        "repeated-member-type-change",
+        "repeated-member-name-once"
       ],
       "digest": "contract"
     }

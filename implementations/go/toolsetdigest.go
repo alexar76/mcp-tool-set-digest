@@ -477,6 +477,11 @@ func ToolsOf(value any) ([]any, error) {
 	if object, ok := value.(map[string]any); ok {
 		wrapped, _ := object["result"].(map[string]any)
 		for _, result := range []map[string]any{object, wrapped} {
+			_, hasTools := result["tools"]
+			_, hasResult := result["result"]
+			if hasTools && hasResult {
+				return nil, &DigestError{"TSD-TOOL", "an object holds both tools and result (section 3)"}
+			}
 			if tools, ok := result["tools"].([]any); ok {
 				if _, hasCursor := result["nextCursor"]; hasCursor {
 					return nil, &DigestError{"TSD-PAGE", "collect all pages and pass the joined tools array"}

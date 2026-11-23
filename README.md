@@ -7,7 +7,7 @@ One way to hash what an MCP server says about its tools, so that two parties who
 the tool text can tell whether they were served the same thing.
 
 * [`SPEC.md`](SPEC.md): the specification, `mcp-tool-set-digest/1` (draft of 2026-11-13, about four pages).
-* [`vectors/vectors.json`](vectors/vectors.json): 73 test vectors, with the canonical text each digest is the hash of.
+* [`vectors/vectors.json`](vectors/vectors.json): 92 test vectors, with the canonical text each digest is the hash of.
 * [`implementations/`](implementations/): reference implementations in Python, JavaScript and Go, each one file with no dependencies.
 
 ## The digests in one paragraph
@@ -63,6 +63,8 @@ The vectors cover what goes wrong in practice:
 | members | absent, `null` and wrongly typed `description`, `inputSchema`, `outputSchema` |
 | extras | present and absent; `readOnlyHint` and `destructiveHint` flips; numbers and names outside the BMP; two tools with one name |
 | not a tool | a string, `null`, no `name`, an empty `name` |
+| repeated names | a member written twice in a tool, inside `inputSchema` and outside the contract; once plainly and once escaped; an empty `name` first or last |
+| depth | 512 levels counted from the tools array on each side of the contract, and one past it |
 | several codes | two tools with one name whose extras also hold a lone surrogate or a number with no double; a lone surrogate before an entry that is not a tool |
 
 To run everything in this repository:

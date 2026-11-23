@@ -4,8 +4,8 @@ separately from its reference implementations.
     PYTHONPATH=<monorepo>/histor:<monorepo>/awr/reference/python python3 scripts/cross_check_histor.py
 
 * The contract digest against ``histor.subject.tool_set_digest``: every vector must agree. HISTOR's
-  error codes are its own: MTL-SUBJ-001 (not a tool, or a string it cannot canonicalise) and
-  MTL-NUM-001 (a number with no double).
+  error codes are its own: MTL-SUBJ-001 (not a tool, or a string it cannot canonicalise),
+  MTL-NUM-001 (a number with no double) and MTL-SUBJ-005 (deeper than section 12 allows).
 * The extras digest against ``histor.extras.tool_extras``, the digest HISTOR publishes as
   ``toolExtrasDigest``, under each of HISTOR's two schemes. HISTOR's is the bounded, storage-oriented
   form (SPEC.md section 8.1). Under ``legacy`` (what HISTOR published until it moves) its serialiser is
@@ -23,7 +23,8 @@ from histor import extras as histor_extras
 from histor.extras import tool_extras
 from histor.subject import MtlError, tool_set_digest
 
-SAME_REASON = {"TSD-TOOL": {"MTL-SUBJ-001"}, "TSD-TEXT": {"MTL-SUBJ-001"}, "TSD-NUMBER": {"MTL-NUM-001"}}
+SAME_REASON = {"TSD-TOOL": {"MTL-SUBJ-001"}, "TSD-TEXT": {"MTL-SUBJ-001"}, "TSD-NUMBER": {"MTL-NUM-001"},
+               "TSD-DEPTH": {"MTL-SUBJ-005"}}
 
 #: vector id -> why HISTOR's deployed extras digest is another value there
 KNOWN = {
@@ -31,6 +32,9 @@ KNOWN = {
     "extras-numbers-canonical": "the same: 1e-7 is written 1e-07, and the integer beyond 2^53 is not rounded",
     "extras-order-utf16": "HISTOR sorts member names by code point; RFC 8785 sorts by UTF-16 code unit",
     "number-overflow-in-extras": "HISTOR stores a number with no double as null and digests the rest",
+    "extras-number-overflow-1e400": "HISTOR stores a number with no double as null and digests the rest",
+    "depth-extras-510": "HISTOR stores extras at most 12 levels deep (histor.extras.MAX_DEPTH) and digests what it stores",
+    "depth-extras-511": "HISTOR stores extras at most 12 levels deep (histor.extras.MAX_DEPTH) and digests what it stores",
     "lone-surrogate-in-extras": "HISTOR replaces an unpaired surrogate with U+FFFD and digests the result",
     "duplicate-names-both-with-extras": "HISTOR keeps the extras of the tool listed last",
     "duplicate-names-before-lone-surrogate": "HISTOR keeps the extras of the tool listed last",
@@ -43,6 +47,7 @@ KNOWN = {
     "name-missing": "HISTOR passes over an entry that is not a tool",
     "name-empty": "HISTOR passes over an entry that is not a tool",
     "name-not-string": "HISTOR passes over an entry that is not a tool",
+    "repeated-member-name-last-empty": "HISTOR passes over an entry that is not a tool",
 }
 
 #: the three KNOWN entries that are serialisation, not storage limits: gone under rfc8785

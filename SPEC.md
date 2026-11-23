@@ -1,6 +1,6 @@
 # MCP tool-set digest, version 1
 
-Identifier: `mcp-tool-set-digest/1` · Editors' draft, 2026-11-22 · Text: CC BY 4.0 · Code and vectors: Apache-2.0 OR MIT
+Identifier: `mcp-tool-set-digest/1` · Editors' draft, 2026-11-23 · Text: CC BY 4.0 · Code and vectors: Apache-2.0 OR MIT
 
 Editors: Aleksandr Artamokhov (HISTOR), Emmanuel Orta (CrawlCheck)
 
@@ -60,6 +60,11 @@ member a tool carries (`title`, `annotations`, `icons`, `execution`, `_meta`, ve
    containing `nextCursor` is insufficient input, even if the cursor is an empty string. A bare
    array or a final page cannot show whether earlier pages were omitted. The caller is responsible
    for gathering them before hashing.
+   A reader takes the array in one of three forms: the array itself; a `tools/list` result object,
+   from its `tools` member; or a JSON-RPC response, from the `tools` member of its `result`. An
+   object read as one of these that holds both a `tools` member and a `result` member is neither
+   form: which list it means is not clear, so the set has no digest (`TSD-TOOL`), whatever else it
+   holds. Two `tools` members in one object are a repeated name (item 4): the last one counts.
 2. A list is what one server answered to one request under one authorisation. A server may list
    other tools to another user, scope or protocol version; those are other tool sets. A digest
    says nothing about a list the producer did not read.
@@ -69,7 +74,9 @@ member a tool carries (`title`, `annotations`, `icons`, `execution`, `_meta`, ve
    outside ±(2^53 − 1) to its nearest double before use (section 6).
 4. When an object repeats a member name, the last one counts, which is what `JSON.parse`, Python's
    `json` and Go's `encoding/json` do. A producer whose parser reports repeated names SHOULD say so
-   beside the digest. The vectors hold no repeated member names.
+   beside the digest. The `repeated-member-*` vectors pin the rule in a tool, inside `inputSchema`,
+   in a member outside the contract and for a name written once with an escape; the last value also
+   decides validity (an empty `name` last gives `TSD-TOOL`, an empty `name` first does not).
 5. Nothing is normalised beyond what sections 4 to 8 state: no Unicode normalisation, no trimming,
    no case folding, no reading of the schemas.
 
@@ -124,8 +131,10 @@ Two consequences, stated plainly:
 
 * Two integers that round to the same double (`9007199254740993` and `9007199254740992`) give the
   same digest. A change between them does not move it.
-* A literal with no double (`1e400`) cannot be written. A set that holds one in a contract member
-  has no digest (`TSD-NUMBER`).
+* A literal with no double (`1e400`) cannot be written. A set that holds one in a value the
+  contract entry carries has no digest (`TSD-NUMBER`). A `description` that is not a string and an
+  `inputSchema` that is not an object are replaced by their defaults (section 4), so `1e400` there
+  reaches neither digest.
 
 A string that holds a surrogate code unit without its pair cannot be written as UTF-8 and RFC 8785
 makes it an error. A set that holds one in a contract member has no digest (`TSD-TEXT`).
@@ -212,7 +221,7 @@ and `b08036e71687b7855244656f049eec719c13c214eb9575731f118331e565cb3c`.
 | Code | When | Which digest |
 |---|---|---|
 | `TSD-PAGE` | the complete tool list is unavailable, including a result that still carries `nextCursor` | both |
-| `TSD-TOOL` | an element of the array is not a JSON object, or has no non-empty string `name` | both |
+| `TSD-TOOL` | an element of the array is not a JSON object, or has no non-empty string `name`; or the input holds both `tools` and `result` (section 3) | both |
 | `TSD-NUMBER` | a member holds a number with no IEEE 754 double | the digest that covers that member |
 | `TSD-TEXT` | a member holds a string, or a member name, with an unpaired surrogate | the digest that covers that member |
 | `TSD-NAME` | two tools share a name and both have extras | the extras digest |
@@ -405,6 +414,18 @@ values for the same list:
 
 ## Change log
 
+* 2026-11-23: section 3 names the three input forms, and an object that holds both `tools` and
+  `result` gives `TSD-TOOL` (case 1 on issue #1, the wording agreed there with Emmanuel Orta and
+  bcrypto0); two `tools` members fall under the repeated-name rule. Before, the three reference
+  implementations took the top-level `tools` and ignored `result`; `scripts/check.sh` now checks the
+  wrapper cases through all three. Section 6 says that `TSD-NUMBER` applies to a value the contract
+  entry carries, which the references and the vectors already did.
+* 2026-11-23: vectors (92). Seven from Emmanuel Orta's pull request #2: the
+  depth edges of section 12 on each side, a 600-deep description that reaches neither digest, and
+  `1e400` as a description (no code) and as an extra (`TSD-NUMBER` for the extras digest). Seven
+  from bcrypto0 on issue #1 for repeated member names (section 3.4), with five vectors that write
+  the same tools once so that six equal pairs tie them together. All agree with the three
+  reference implementations, and the repeated-member ones with the values bcrypto0's reader gave.
 * 2026-11-22: section 12 gains the depth rule and section 10 the code `TSD-DEPTH`, as proposed by
   Emmanuel Orta (CrawlCheck) on alexar76/mcp-tool-set-digest#1 after bcrypto0 reported that the text
   named no bound. The three reference implementations follow it (`scripts/check_depth.py`: the edges

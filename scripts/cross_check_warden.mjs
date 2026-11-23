@@ -5,7 +5,7 @@
 //   node scripts/cross_check_warden.mjs <path to warden/dist>
 //
 // WARDEN's older error codes are its own: MTL-SUBJ-001 (not a tool, or a string it cannot
-// canonicalise) and MTL-NUM-001 (a number with no double).
+// canonicalise), MTL-NUM-001 (a number with no double) and MTL-SUBJ-005 (deeper than section 12 allows).
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -13,7 +13,9 @@ import { pathToFileURL } from 'node:url';
 const dist = process.argv[2];
 const { mtlToolSetDigest, MtlError } = await import(pathToFileURL(join(dist, 'mtl.js')).href);
 const { extrasDigest, ToolSetDigestError } = await import(pathToFileURL(join(dist, 'tool-set-digest.js')).href);
-const SAME_REASON = { 'TSD-TOOL': ['MTL-SUBJ-001'], 'TSD-TEXT': ['MTL-SUBJ-001'], 'TSD-NUMBER': ['MTL-NUM-001'] };
+const SAME_REASON = {
+  'TSD-TOOL': ['MTL-SUBJ-001'], 'TSD-TEXT': ['MTL-SUBJ-001'], 'TSD-NUMBER': ['MTL-NUM-001'], 'TSD-DEPTH': ['MTL-SUBJ-005'],
+};
 const document = JSON.parse(readFileSync(new URL('../vectors/vectors.json', import.meta.url), 'utf8'));
 let failed = 0;
 for (const vector of document.vectors) {

@@ -49,6 +49,36 @@ check_pagination node implementations/javascript/tool-set-digest.mjs
 (cd implementations/go && check_pagination go run .)
 echo "command lines reject partial pages"
 
+# Section 3: an object with both tools and result is no input form (TSD-TOOL, no digests); two tools
+# members are a repeated name, and the last one counts.
+check_wrappers() {
+  local ambiguous repeated output
+  for ambiguous in "{\"tools\":$sample,\"result\":{\"tools\":$sample}}" '{"tools":[],"result":null}' \
+      "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"tools\":$sample,\"result\":{}}}"; do
+    if output=$(printf '%s' "$ambiguous" | "$@"); then
+      echo "$* accepted tools next to result: $output"
+      return 1
+    fi
+    python3 - "$output" <<'PY'
+import json
+import sys
+
+out = json.loads(sys.argv[1])
+if out.get("error") != "TSD-TOOL" or {"contract", "extras"}.intersection(out):
+    sys.exit(f"expected TSD-TOOL without digests: {out}")
+PY
+  done
+  for repeated in "{\"tools\":[{\"name\":\"x\"}],\"tools\":$sample}" \
+      "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"tools\":[],\"tools\":$sample}}"; do
+    output=$(printf '%s' "$repeated" | "$@")
+    [ "$(norm "$output")" = "$(norm "$py")" ] || { echo "$* did not read the last tools member: $output"; return 1; }
+  done
+}
+check_wrappers python3 implementations/python/tool_set_digest.py
+check_wrappers node implementations/javascript/tool-set-digest.mjs
+(cd implementations/go && check_wrappers go run .)
+echo "command lines refuse tools next to result and read the last of two tools members"
+
 # Section 12: the depth floor, the same answer from the three readers, no crash at 100,000 levels.
 python3 scripts/check_depth.py
 

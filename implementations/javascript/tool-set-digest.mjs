@@ -171,6 +171,10 @@ function digestOf(entries) {
 export function toolsOf(value) {
   if (Array.isArray(value)) return value;
   for (const result of [value, value?.result]) {
+    if (result !== null && typeof result === 'object' && !Array.isArray(result)
+        && Object.hasOwn(result, 'tools') && Object.hasOwn(result, 'result')) {
+      throw new DigestError('TSD-TOOL', 'an object holds both tools and result (section 3)');
+    }
     if (!Array.isArray(result?.tools)) continue;
     if (Object.hasOwn(result, 'nextCursor')) {
       throw new DigestError('TSD-PAGE', 'collect all pages and pass the joined tools array');
