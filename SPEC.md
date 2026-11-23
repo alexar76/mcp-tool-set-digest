@@ -380,12 +380,12 @@ encoding, ordering or bounds. The daily comparison's inputs carry only the contr
 HISTOR's deployed `toolExtrasDigest` uses the bounded form of section 8.1 and a serialiser that
 differs from RFC 8785 for fractions and integral floats such as `1.0`, integers beyond 2^53, and member
 names outside the Basic Multilingual Plane (sorted by code point). `scripts/cross_check_histor.py`
-runs HISTOR's code over the vectors: of 73, the extras digest agrees on 57 and differs on 16, each of
+runs HISTOR's code over the vectors: of 92, the extras digest agrees on 72 and differs on 20, each of
 them one of those three cases or one of the limits of section 8.1. HISTOR's code since 2026-11-12 can
 also write the RFC 8785 form (its `rfc8785` extras scheme) and move every stored value to it in one
-step; under that scheme it agrees on 60 and differs on the 13 vectors its limits of section 8.1
-change. Its public log still publishes the first form; CrawlCheck's author agreed to the change on
-2026-11-13.
+step; under that scheme it agrees on 75 and differs on the 17 vectors its limits of section 8.1
+change. Its public log has published that form since 2026-11-13, when CrawlCheck's author agreed to
+the change.
 
 **Other constructions.** These cover other members or serialise differently, and give other
 values for the same list:
