@@ -1,6 +1,6 @@
 # MCP tool-set digest, version 1
 
-Identifier: `mcp-tool-set-digest/1` · Editors' draft, 2026-11-23 · Text: CC BY 4.0 · Code and vectors: Apache-2.0 OR MIT
+Identifier: `mcp-tool-set-digest/1` · Editors' draft, 2026-11-24 · Text: CC BY 4.0 · Code and vectors: Apache-2.0 OR MIT
 
 Editors: Aleksandr Artamokhov (HISTOR), Emmanuel Orta (CrawlCheck)
 
@@ -239,6 +239,7 @@ change a comparison (section 11). It MUST NOT skip the tool, repair the value or
 the rest. A comparison with a set whose digest could not be computed has no result; it is not a
 change.
 
+Each digest is computed or refused on its own; a code for one digest does not take the other away.
 An extra never takes the contract digest away: whatever a tool's `title` or `_meta` holds, the
 contract digest is computed from the contract members only.
 
@@ -414,6 +415,11 @@ values for the same list:
 
 ## Change log
 
+* 2026-11-24: section 10 says outright that each digest is computed or refused on its own, so a code
+  for one digest does not take the other away. The table and the rule for extras already implied
+  it. An implementer of the vectors whose runner returned one outcome for the pair, and so lost a
+  computed contract digest wherever the extras side failed, suggested the sentence. No vector
+  changed.
 * 2026-11-23: section 3 names the three input forms, and an object that holds both `tools` and
   `result` gives `TSD-TOOL` (case 1 on issue #1, the wording agreed there with Emmanuel Orta and
   bcrypto0); two `tools` members fall under the repeated-name rule. Before, the three reference
