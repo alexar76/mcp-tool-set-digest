@@ -9,6 +9,7 @@ the tool text can tell whether they were served the same thing.
 * [`SPEC.md`](SPEC.md): the specification, `mcp-tool-set-digest/1` (draft of 2026-11-13, about four pages).
 * [`vectors/vectors.json`](vectors/vectors.json): 92 test vectors, with the canonical text each digest is the hash of.
 * [`implementations/`](implementations/): reference implementations in Python, JavaScript and Go, each one file with no dependencies.
+* [`notes/implementation-admission.md`](notes/implementation-admission.md): a proposal, not part of the specification: binding a signed call to the admitted implementation that may run it, with three test cases.
 
 ## The digests in one paragraph
 

@@ -86,6 +86,11 @@ python3 scripts/check_depth.py
 readme=$(printf '%s' '[{"name": "read_file", "title": "Read file", "description": "Read a file from disk.", "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}, "annotations": {"readOnlyHint": true}}]' | python3 implementations/python/tool_set_digest.py)
 grep -qF -- "$readme" README.md || { echo "README.md shows another output than: $readme"; exit 1; }
 
+# The worked example in notes/implementation-admission.md is what its script prints.
+python3 notes/implementation_admission_example.py | while IFS= read -r line; do
+  grep -qF -- "$line" notes/implementation-admission.md || { echo "notes/implementation-admission.md lacks: $line"; exit 1; }
+done
+
 if [ -n "${HISTOR_PYTHONPATH:-}" ]; then
   PYTHONPATH="$HISTOR_PYTHONPATH" "${HISTOR_PYTHON:-python3}" scripts/cross_check_histor.py
 fi
