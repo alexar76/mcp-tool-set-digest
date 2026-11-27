@@ -1,0 +1,533 @@
+{
+ "format": "RFC 8785 (JCS) cases from the mcp-tool-set-digest/1 test vectors",
+ "licence": "Apache-2.0 OR MIT",
+ "how": "input is JSON text. Parse it as I-JSON and write the RFC 8785 canonical form of the whole value; expected is {canonical, sha256} (sha256 = hex SHA-256 of the UTF-8 bytes of canonical) or {refused, code} when RFC 8785 has no output for the input. implementations holds what each of the three reference implementations answered (python, javascript, go; `--canonical` mode), all equal. equal and differ name pairs whose expected results must match or must not.",
+ "refusals": {
+  "TSD-NUMBER": "number-without-double: a number literal with no IEEE 754 double (RFC 8785 section 3.2.2.3, I-JSON RFC 7493 section 2.2)",
+  "TSD-TEXT": "lone-surrogate: a string holding an unpaired UTF-16 surrogate (RFC 8785 section 3.2.2.2, I-JSON RFC 7493 section 2.1)"
+ },
+ "source": "vectors.json (each case's id is the vector its input comes from; scripts/jcs_subset.py)",
+ "not_covered": "repeated member names (RFC 8785 requires I-JSON, which forbids them; mcp-tool-set-digest keeps the last one, so those vectors are left out) and nesting depth limits.",
+ "equal": [
+  [
+   "numbers-as-written",
+   "numbers-canonical"
+  ],
+  [
+   "extras-numbers-as-written",
+   "extras-numbers-canonical"
+  ],
+  [
+   "integer-beyond-2-53-odd",
+   "integer-beyond-2-53-even"
+  ],
+  [
+   "string-escaped-a",
+   "string-raw-a"
+  ],
+  [
+   "order-utf16-escaped",
+   "order-utf16-raw"
+  ]
+ ],
+ "differ": [
+  [
+   "string-nfc",
+   "string-nfd"
+  ],
+  [
+   "typical",
+   "typical-whitespace"
+  ]
+ ],
+ "cases": [
+  {
+   "id": "numbers-as-written",
+   "note": "Every way JSON lets the same doubles be written.",
+   "input": "[{\"name\":\"n\",\"inputSchema\":{\"minimum\":1.0,\"maximum\":1E2,\"multipleOf\":0.50,\"default\":-0.0,\"a\":1e21,\"b\":1e-7,\"c\":0.000001,\"d\":123456789012345680000,\"e\":9007199254740993,\"f\":0.30000000000000004,\"g\":1.5e300,\"h\":-2.50,\"i\":5e-324,\"j\":1.7976931348623157e308,\"k\":100,\"l\":1e2,\"m\":0.1e1}}]",
+   "expected": {
+    "canonical": "[{\"inputSchema\":{\"a\":1e+21,\"b\":1e-7,\"c\":0.000001,\"d\":123456789012345680000,\"default\":0,\"e\":9007199254740992,\"f\":0.30000000000000004,\"g\":1.5e+300,\"h\":-2.5,\"i\":5e-324,\"j\":1.7976931348623157e+308,\"k\":100,\"l\":100,\"m\":1,\"maximum\":100,\"minimum\":1,\"multipleOf\":0.5},\"name\":\"n\"}]",
+    "sha256": "ab32e923e9ddccef87b8dfef9bccca86d916c310083de5692328d75af07d31b1"
+   },
+   "implementations": {
+    "python": {
+     "canonical": "[{\"inputSchema\":{\"a\":1e+21,\"b\":1e-7,\"c\":0.000001,\"d\":123456789012345680000,\"default\":0,\"e\":9007199254740992,\"f\":0.30000000000000004,\"g\":1.5e+300,\"h\":-2.5,\"i\":5e-324,\"j\":1.7976931348623157e+308,\"k\":100,\"l\":100,\"m\":1,\"maximum\":100,\"minimum\":1,\"multipleOf\":0.5},\"name\":\"n\"}]",
+     "sha256": "ab32e923e9ddccef87b8dfef9bccca86d916c310083de5692328d75af07d31b1"
+    },
+    "javascript": {
+     "canonical": "[{\"inputSchema\":{\"a\":1e+21,\"b\":1e-7,\"c\":0.000001,\"d\":123456789012345680000,\"default\":0,\"e\":9007199254740992,\"f\":0.30000000000000004,\"g\":1.5e+300,\"h\":-2.5,\"i\":5e-324,\"j\":1.7976931348623157e+308,\"k\":100,\"l\":100,\"m\":1,\"maximum\":100,\"minimum\":1,\"multipleOf\":0.5},\"name\":\"n\"}]",
+     "sha256": "ab32e923e9ddccef87b8dfef9bccca86d916c310083de5692328d75af07d31b1"
+    },
+    "go": {
+     "canonical": "[{\"inputSchema\":{\"a\":1e+21,\"b\":1e-7,\"c\":0.000001,\"d\":123456789012345680000,\"default\":0,\"e\":9007199254740992,\"f\":0.30000000000000004,\"g\":1.5e+300,\"h\":-2.5,\"i\":5e-324,\"j\":1.7976931348623157e+308,\"k\":100,\"l\":100,\"m\":1,\"maximum\":100,\"minimum\":1,\"multipleOf\":0.5},\"name\":\"n\"}]",
+     "sha256": "ab32e923e9ddccef87b8dfef9bccca86d916c310083de5692328d75af07d31b1"
+    }
+   }
+  },
+  {
+   "id": "numbers-canonical",
+   "note": "The same doubles in the form RFC 8785 writes them.",
+   "input": "[{\"name\":\"n\",\"inputSchema\":{\"minimum\":1,\"maximum\":100,\"multipleOf\":0.5,\"default\":0,\"a\":1e+21,\"b\":1e-7,\"c\":0.000001,\"d\":123456789012345680000,\"e\":9007199254740992,\"f\":0.30000000000000004,\"g\":1.5e+300,\"h\":-2.5,\"i\":5e-324,\"j\":1.7976931348623157e+308,\"k\":100,\"l\":100,\"m\":1}}]",
+   "expected": {
+    "canonical": "[{\"inputSchema\":{\"a\":1e+21,\"b\":1e-7,\"c\":0.000001,\"d\":123456789012345680000,\"default\":0,\"e\":9007199254740992,\"f\":0.30000000000000004,\"g\":1.5e+300,\"h\":-2.5,\"i\":5e-324,\"j\":1.7976931348623157e+308,\"k\":100,\"l\":100,\"m\":1,\"maximum\":100,\"minimum\":1,\"multipleOf\":0.5},\"name\":\"n\"}]",
+    "sha256": "ab32e923e9ddccef87b8dfef9bccca86d916c310083de5692328d75af07d31b1"
+   },
+   "implementations": {
+    "python": {
+     "canonical": "[{\"inputSchema\":{\"a\":1e+21,\"b\":1e-7,\"c\":0.000001,\"d\":123456789012345680000,\"default\":0,\"e\":9007199254740992,\"f\":0.30000000000000004,\"g\":1.5e+300,\"h\":-2.5,\"i\":5e-324,\"j\":1.7976931348623157e+308,\"k\":100,\"l\":100,\"m\":1,\"maximum\":100,\"minimum\":1,\"multipleOf\":0.5},\"name\":\"n\"}]",
+     "sha256": "ab32e923e9ddccef87b8dfef9bccca86d916c310083de5692328d75af07d31b1"
+    },
+    "javascript": {
+     "canonical": "[{\"inputSchema\":{\"a\":1e+21,\"b\":1e-7,\"c\":0.000001,\"d\":123456789012345680000,\"default\":0,\"e\":9007199254740992,\"f\":0.30000000000000004,\"g\":1.5e+300,\"h\":-2.5,\"i\":5e-324,\"j\":1.7976931348623157e+308,\"k\":100,\"l\":100,\"m\":1,\"maximum\":100,\"minimum\":1,\"multipleOf\":0.5},\"name\":\"n\"}]",
+     "sha256": "ab32e923e9ddccef87b8dfef9bccca86d916c310083de5692328d75af07d31b1"
+    },
+    "go": {
+     "canonical": "[{\"inputSchema\":{\"a\":1e+21,\"b\":1e-7,\"c\":0.000001,\"d\":123456789012345680000,\"default\":0,\"e\":9007199254740992,\"f\":0.30000000000000004,\"g\":1.5e+300,\"h\":-2.5,\"i\":5e-324,\"j\":1.7976931348623157e+308,\"k\":100,\"l\":100,\"m\":1,\"maximum\":100,\"minimum\":1,\"multipleOf\":0.5},\"name\":\"n\"}]",
+     "sha256": "ab32e923e9ddccef87b8dfef9bccca86d916c310083de5692328d75af07d31b1"
+    }
+   }
+  },
+  {
+   "id": "extras-numbers-as-written",
+   "note": "Numbers in extras, in forms JSON allows.",
+   "input": "[{\"name\":\"n\",\"_meta\":{\"price\":1.0,\"limit\":1E2,\"ratio\":0.50,\"big\":9007199254740993,\"tiny\":1e-7}}]",
+   "expected": {
+    "canonical": "[{\"_meta\":{\"big\":9007199254740992,\"limit\":100,\"price\":1,\"ratio\":0.5,\"tiny\":1e-7},\"name\":\"n\"}]",
+    "sha256": "b2f1923446946eaae669e3723d7bc93d97e0f7dea66364b92b2ec06840bf4ab3"
+   },
+   "implementations": {
+    "python": {
+     "canonical": "[{\"_meta\":{\"big\":9007199254740992,\"limit\":100,\"price\":1,\"ratio\":0.5,\"tiny\":1e-7},\"name\":\"n\"}]",
+     "sha256": "b2f1923446946eaae669e3723d7bc93d97e0f7dea66364b92b2ec06840bf4ab3"
+    },
+    "javascript": {
+     "canonical": "[{\"_meta\":{\"big\":9007199254740992,\"limit\":100,\"price\":1,\"ratio\":0.5,\"tiny\":1e-7},\"name\":\"n\"}]",
+     "sha256": "b2f1923446946eaae669e3723d7bc93d97e0f7dea66364b92b2ec06840bf4ab3"
+    },
+    "go": {
+     "canonical": "[{\"_meta\":{\"big\":9007199254740992,\"limit\":100,\"price\":1,\"ratio\":0.5,\"tiny\":1e-7},\"name\":\"n\"}]",
+     "sha256": "b2f1923446946eaae669e3723d7bc93d97e0f7dea66364b92b2ec06840bf4ab3"
+    }
+   }
+  },
+  {
+   "id": "extras-numbers-canonical",
+   "note": "The same doubles in the form RFC 8785 writes them.",
+   "input": "[{\"name\":\"n\",\"_meta\":{\"price\":1,\"limit\":100,\"ratio\":0.5,\"big\":9007199254740992,\"tiny\":1e-7}}]",
+   "expected": {
+    "canonical": "[{\"_meta\":{\"big\":9007199254740992,\"limit\":100,\"price\":1,\"ratio\":0.5,\"tiny\":1e-7},\"name\":\"n\"}]",
+    "sha256": "b2f1923446946eaae669e3723d7bc93d97e0f7dea66364b92b2ec06840bf4ab3"
+   },
+   "implementations": {
+    "python": {
+     "canonical": "[{\"_meta\":{\"big\":9007199254740992,\"limit\":100,\"price\":1,\"ratio\":0.5,\"tiny\":1e-7},\"name\":\"n\"}]",
+     "sha256": "b2f1923446946eaae669e3723d7bc93d97e0f7dea66364b92b2ec06840bf4ab3"
+    },
+    "javascript": {
+     "canonical": "[{\"_meta\":{\"big\":9007199254740992,\"limit\":100,\"price\":1,\"ratio\":0.5,\"tiny\":1e-7},\"name\":\"n\"}]",
+     "sha256": "b2f1923446946eaae669e3723d7bc93d97e0f7dea66364b92b2ec06840bf4ab3"
+    },
+    "go": {
+     "canonical": "[{\"_meta\":{\"big\":9007199254740992,\"limit\":100,\"price\":1,\"ratio\":0.5,\"tiny\":1e-7},\"name\":\"n\"}]",
+     "sha256": "b2f1923446946eaae669e3723d7bc93d97e0f7dea66364b92b2ec06840bf4ab3"
+    }
+   }
+  },
+  {
+   "id": "integer-beyond-2-53-odd",
+   "note": "9007199254740993 has no double of its own: it is digested as 9007199254740992.",
+   "input": "[{\"name\":\"n\",\"inputSchema\":{\"maximum\":9007199254740993}}]",
+   "expected": {
+    "canonical": "[{\"inputSchema\":{\"maximum\":9007199254740992},\"name\":\"n\"}]",
+    "sha256": "c025eee5f092c20fe6243a68b5ba8f69e4cc1a30ab4db4e72f884be7c415a368"
+   },
+   "implementations": {
+    "python": {
+     "canonical": "[{\"inputSchema\":{\"maximum\":9007199254740992},\"name\":\"n\"}]",
+     "sha256": "c025eee5f092c20fe6243a68b5ba8f69e4cc1a30ab4db4e72f884be7c415a368"
+    },
+    "javascript": {
+     "canonical": "[{\"inputSchema\":{\"maximum\":9007199254740992},\"name\":\"n\"}]",
+     "sha256": "c025eee5f092c20fe6243a68b5ba8f69e4cc1a30ab4db4e72f884be7c415a368"
+    },
+    "go": {
+     "canonical": "[{\"inputSchema\":{\"maximum\":9007199254740992},\"name\":\"n\"}]",
+     "sha256": "c025eee5f092c20fe6243a68b5ba8f69e4cc1a30ab4db4e72f884be7c415a368"
+    }
+   }
+  },
+  {
+   "id": "integer-beyond-2-53-even",
+   "note": "9007199254740992, which the previous vector rounds to.",
+   "input": "[{\"name\":\"n\",\"inputSchema\":{\"maximum\":9007199254740992}}]",
+   "expected": {
+    "canonical": "[{\"inputSchema\":{\"maximum\":9007199254740992},\"name\":\"n\"}]",
+    "sha256": "c025eee5f092c20fe6243a68b5ba8f69e4cc1a30ab4db4e72f884be7c415a368"
+   },
+   "implementations": {
+    "python": {
+     "canonical": "[{\"inputSchema\":{\"maximum\":9007199254740992},\"name\":\"n\"}]",
+     "sha256": "c025eee5f092c20fe6243a68b5ba8f69e4cc1a30ab4db4e72f884be7c415a368"
+    },
+    "javascript": {
+     "canonical": "[{\"inputSchema\":{\"maximum\":9007199254740992},\"name\":\"n\"}]",
+     "sha256": "c025eee5f092c20fe6243a68b5ba8f69e4cc1a30ab4db4e72f884be7c415a368"
+    },
+    "go": {
+     "canonical": "[{\"inputSchema\":{\"maximum\":9007199254740992},\"name\":\"n\"}]",
+     "sha256": "c025eee5f092c20fe6243a68b5ba8f69e4cc1a30ab4db4e72f884be7c415a368"
+    }
+   }
+  },
+  {
+   "id": "number-overflow",
+   "note": "1e400 has no IEEE 754 double.",
+   "input": "[{\"name\":\"n\",\"inputSchema\":{\"maximum\":1e400}}]",
+   "expected": {
+    "refused": "number-without-double",
+    "code": "TSD-NUMBER"
+   },
+   "implementations": {
+    "python": {
+     "error": "TSD-NUMBER"
+    },
+    "javascript": {
+     "error": "TSD-NUMBER"
+    },
+    "go": {
+     "error": "TSD-NUMBER"
+    }
+   }
+  },
+  {
+   "id": "number-overflow-negative",
+   "note": "Neither has -1e400.",
+   "input": "[{\"name\":\"n\",\"inputSchema\":{\"minimum\":-1e400}}]",
+   "expected": {
+    "refused": "number-without-double",
+    "code": "TSD-NUMBER"
+   },
+   "implementations": {
+    "python": {
+     "error": "TSD-NUMBER"
+    },
+    "javascript": {
+     "error": "TSD-NUMBER"
+    },
+    "go": {
+     "error": "TSD-NUMBER"
+    }
+   }
+  },
+  {
+   "id": "string-escapes",
+   "note": "Every escape JSON has, and characters JSON.stringify leaves alone (U+007F, U+2028, U+2029).",
+   "input": "[{\"name\":\"s\",\"description\":\"quote \\\" backslash \\\\ slash \\/ \\b\\f\\n\\r\\t nul \\u0000 unit \\u001f del \\u007f ls \u2028 ps \u2029 astral \ud83d\ude00 end\"}]",
+   "expected": {
+    "canonical": "[{\"description\":\"quote \\\" backslash \\\\ slash / \\b\\f\\n\\r\\t nul \\u0000 unit \\u001f del \u007f ls \u2028 ps \u2029 astral \ud83d\ude00 end\",\"name\":\"s\"}]",
+    "sha256": "56c9e66415a622c458ed4cf93f84b41175a6b5f4a18a28a5ba16f403d7372ff9"
+   },
+   "implementations": {
+    "python": {
+     "canonical": "[{\"description\":\"quote \\\" backslash \\\\ slash / \\b\\f\\n\\r\\t nul \\u0000 unit \\u001f del \u007f ls \u2028 ps \u2029 astral \ud83d\ude00 end\",\"name\":\"s\"}]",
+     "sha256": "56c9e66415a622c458ed4cf93f84b41175a6b5f4a18a28a5ba16f403d7372ff9"
+    },
+    "javascript": {
+     "canonical": "[{\"description\":\"quote \\\" backslash \\\\ slash / \\b\\f\\n\\r\\t nul \\u0000 unit \\u001f del \u007f ls \u2028 ps \u2029 astral \ud83d\ude00 end\",\"name\":\"s\"}]",
+     "sha256": "56c9e66415a622c458ed4cf93f84b41175a6b5f4a18a28a5ba16f403d7372ff9"
+    },
+    "go": {
+     "canonical": "[{\"description\":\"quote \\\" backslash \\\\ slash / \\b\\f\\n\\r\\t nul \\u0000 unit \\u001f del \u007f ls \u2028 ps \u2029 astral \ud83d\ude00 end\",\"name\":\"s\"}]",
+     "sha256": "56c9e66415a622c458ed4cf93f84b41175a6b5f4a18a28a5ba16f403d7372ff9"
+    }
+   }
+  },
+  {
+   "id": "string-escaped-a",
+   "note": "\\u0041 and A are the same string.",
+   "input": "[{\"name\":\"s\",\"description\":\"A\u00e9\"}]",
+   "expected": {
+    "canonical": "[{\"description\":\"A\u00e9\",\"name\":\"s\"}]",
+    "sha256": "8f9102fbd1f3efc77087f1b487aba1e82467e594529225755a86b19a32fc3d84"
+   },
+   "implementations": {
+    "python": {
+     "canonical": "[{\"description\":\"A\u00e9\",\"name\":\"s\"}]",
+     "sha256": "8f9102fbd1f3efc77087f1b487aba1e82467e594529225755a86b19a32fc3d84"
+    },
+    "javascript": {
+     "canonical": "[{\"description\":\"A\u00e9\",\"name\":\"s\"}]",
+     "sha256": "8f9102fbd1f3efc77087f1b487aba1e82467e594529225755a86b19a32fc3d84"
+    },
+    "go": {
+     "canonical": "[{\"description\":\"A\u00e9\",\"name\":\"s\"}]",
+     "sha256": "8f9102fbd1f3efc77087f1b487aba1e82467e594529225755a86b19a32fc3d84"
+    }
+   }
+  },
+  {
+   "id": "string-raw-a",
+   "note": "The same description written as the characters themselves.",
+   "input": "[{\"name\":\"s\",\"description\":\"A\u00e9\"}]",
+   "expected": {
+    "canonical": "[{\"description\":\"A\u00e9\",\"name\":\"s\"}]",
+    "sha256": "8f9102fbd1f3efc77087f1b487aba1e82467e594529225755a86b19a32fc3d84"
+   },
+   "implementations": {
+    "python": {
+     "canonical": "[{\"description\":\"A\u00e9\",\"name\":\"s\"}]",
+     "sha256": "8f9102fbd1f3efc77087f1b487aba1e82467e594529225755a86b19a32fc3d84"
+    },
+    "javascript": {
+     "canonical": "[{\"description\":\"A\u00e9\",\"name\":\"s\"}]",
+     "sha256": "8f9102fbd1f3efc77087f1b487aba1e82467e594529225755a86b19a32fc3d84"
+    },
+    "go": {
+     "canonical": "[{\"description\":\"A\u00e9\",\"name\":\"s\"}]",
+     "sha256": "8f9102fbd1f3efc77087f1b487aba1e82467e594529225755a86b19a32fc3d84"
+    }
+   }
+  },
+  {
+   "id": "string-nfc",
+   "note": "\u00e9 as one code point (U+00E9).",
+   "input": "[{\"name\":\"s\",\"description\":\"caf\u00e9\"}]",
+   "expected": {
+    "canonical": "[{\"description\":\"caf\u00e9\",\"name\":\"s\"}]",
+    "sha256": "cf3f3edf63ecbb6d301612fa802b4905261b80954d6d6da63fe6e1bcc4345437"
+   },
+   "implementations": {
+    "python": {
+     "canonical": "[{\"description\":\"caf\u00e9\",\"name\":\"s\"}]",
+     "sha256": "cf3f3edf63ecbb6d301612fa802b4905261b80954d6d6da63fe6e1bcc4345437"
+    },
+    "javascript": {
+     "canonical": "[{\"description\":\"caf\u00e9\",\"name\":\"s\"}]",
+     "sha256": "cf3f3edf63ecbb6d301612fa802b4905261b80954d6d6da63fe6e1bcc4345437"
+    },
+    "go": {
+     "canonical": "[{\"description\":\"caf\u00e9\",\"name\":\"s\"}]",
+     "sha256": "cf3f3edf63ecbb6d301612fa802b4905261b80954d6d6da63fe6e1bcc4345437"
+    }
+   }
+  },
+  {
+   "id": "string-nfd",
+   "note": "\u00e9 as e and a combining accent (U+0065 U+0301): another string, another digest. Nothing is normalised.",
+   "input": "[{\"name\":\"s\",\"description\":\"cafe\u0301\"}]",
+   "expected": {
+    "canonical": "[{\"description\":\"cafe\u0301\",\"name\":\"s\"}]",
+    "sha256": "891bbab8fb3a4d20ffa1dd6dc863ac8bc6a6059f8ec3dd9f303e51ee48f0d8f6"
+   },
+   "implementations": {
+    "python": {
+     "canonical": "[{\"description\":\"cafe\u0301\",\"name\":\"s\"}]",
+     "sha256": "891bbab8fb3a4d20ffa1dd6dc863ac8bc6a6059f8ec3dd9f303e51ee48f0d8f6"
+    },
+    "javascript": {
+     "canonical": "[{\"description\":\"cafe\u0301\",\"name\":\"s\"}]",
+     "sha256": "891bbab8fb3a4d20ffa1dd6dc863ac8bc6a6059f8ec3dd9f303e51ee48f0d8f6"
+    },
+    "go": {
+     "canonical": "[{\"description\":\"cafe\u0301\",\"name\":\"s\"}]",
+     "sha256": "891bbab8fb3a4d20ffa1dd6dc863ac8bc6a6059f8ec3dd9f303e51ee48f0d8f6"
+    }
+   }
+  },
+  {
+   "id": "lone-surrogate-high",
+   "note": "A high surrogate with no low one after it.",
+   "input": "[{\"name\":\"s\",\"description\":\"x\\ud800y\"}]",
+   "expected": {
+    "refused": "lone-surrogate",
+    "code": "TSD-TEXT"
+   },
+   "implementations": {
+    "python": {
+     "error": "TSD-TEXT"
+    },
+    "javascript": {
+     "error": "TSD-TEXT"
+    },
+    "go": {
+     "error": "TSD-TEXT"
+    }
+   }
+  },
+  {
+   "id": "lone-surrogate-low",
+   "note": "A low surrogate with no high one before it.",
+   "input": "[{\"name\":\"s\",\"description\":\"x\\udc00y\"}]",
+   "expected": {
+    "refused": "lone-surrogate",
+    "code": "TSD-TEXT"
+   },
+   "implementations": {
+    "python": {
+     "error": "TSD-TEXT"
+    },
+    "javascript": {
+     "error": "TSD-TEXT"
+    },
+    "go": {
+     "error": "TSD-TEXT"
+    }
+   }
+  },
+  {
+   "id": "lone-surrogate-reversed",
+   "note": "A low surrogate followed by a high one.",
+   "input": "[{\"name\":\"s\",\"description\":\"\\ude00\\ud83d\"}]",
+   "expected": {
+    "refused": "lone-surrogate",
+    "code": "TSD-TEXT"
+   },
+   "implementations": {
+    "python": {
+     "error": "TSD-TEXT"
+    },
+    "javascript": {
+     "error": "TSD-TEXT"
+    },
+    "go": {
+     "error": "TSD-TEXT"
+    }
+   }
+  },
+  {
+   "id": "lone-surrogate-in-key",
+   "note": "A lone surrogate in a member name.",
+   "input": "[{\"name\":\"s\",\"inputSchema\":{\"\\ud83d\":1}}]",
+   "expected": {
+    "refused": "lone-surrogate",
+    "code": "TSD-TEXT"
+   },
+   "implementations": {
+    "python": {
+     "error": "TSD-TEXT"
+    },
+    "javascript": {
+     "error": "TSD-TEXT"
+    },
+    "go": {
+     "error": "TSD-TEXT"
+    }
+   }
+  },
+  {
+   "id": "member-order-keys",
+   "note": "Member names are sorted by UTF-16 code unit, also when they are not ASCII.",
+   "input": "[{\"name\":\"t\",\"inputSchema\":{\"properties\":{\"\u00e9\":{},\"e\":{},\"z\":{},\"\ud83d\ude00\":{},\"\ue000\":{},\"E\":{},\"\":{},\"1\":{},\"10\":{},\"2\":{}}}}]",
+   "expected": {
+    "canonical": "[{\"inputSchema\":{\"properties\":{\"\":{},\"1\":{},\"10\":{},\"2\":{},\"E\":{},\"e\":{},\"z\":{},\"\u00e9\":{},\"\ud83d\ude00\":{},\"\ue000\":{}}},\"name\":\"t\"}]",
+    "sha256": "bed37250db22a5adfce816913ba25592dfc0ba2a7cdef2e530e1255bd70683ce"
+   },
+   "implementations": {
+    "python": {
+     "canonical": "[{\"inputSchema\":{\"properties\":{\"\":{},\"1\":{},\"10\":{},\"2\":{},\"E\":{},\"e\":{},\"z\":{},\"\u00e9\":{},\"\ud83d\ude00\":{},\"\ue000\":{}}},\"name\":\"t\"}]",
+     "sha256": "bed37250db22a5adfce816913ba25592dfc0ba2a7cdef2e530e1255bd70683ce"
+    },
+    "javascript": {
+     "canonical": "[{\"inputSchema\":{\"properties\":{\"\":{},\"1\":{},\"10\":{},\"2\":{},\"E\":{},\"e\":{},\"z\":{},\"\u00e9\":{},\"\ud83d\ude00\":{},\"\ue000\":{}}},\"name\":\"t\"}]",
+     "sha256": "bed37250db22a5adfce816913ba25592dfc0ba2a7cdef2e530e1255bd70683ce"
+    },
+    "go": {
+     "canonical": "[{\"inputSchema\":{\"properties\":{\"\":{},\"1\":{},\"10\":{},\"2\":{},\"E\":{},\"e\":{},\"z\":{},\"\u00e9\":{},\"\ud83d\ude00\":{},\"\ue000\":{}}},\"name\":\"t\"}]",
+     "sha256": "bed37250db22a5adfce816913ba25592dfc0ba2a7cdef2e530e1255bd70683ce"
+    }
+   }
+  },
+  {
+   "id": "order-utf16-escaped",
+   "note": "U+E000 and U+1F600 written as \\u escapes. RFC 8785 keeps array order; with order-utf16-raw this shows that escaped and raw characters give the same bytes.",
+   "input": "[{\"name\":\"\ue000\"},{\"name\":\"\ud83d\ude00\"}]",
+   "expected": {
+    "canonical": "[{\"name\":\"\ue000\"},{\"name\":\"\ud83d\ude00\"}]",
+    "sha256": "c8caa0a74a5f5d5b1e55e76073a87d96f7fffaf9058c73cdde8e47ade5a5ab25"
+   },
+   "implementations": {
+    "python": {
+     "canonical": "[{\"name\":\"\ue000\"},{\"name\":\"\ud83d\ude00\"}]",
+     "sha256": "c8caa0a74a5f5d5b1e55e76073a87d96f7fffaf9058c73cdde8e47ade5a5ab25"
+    },
+    "javascript": {
+     "canonical": "[{\"name\":\"\ue000\"},{\"name\":\"\ud83d\ude00\"}]",
+     "sha256": "c8caa0a74a5f5d5b1e55e76073a87d96f7fffaf9058c73cdde8e47ade5a5ab25"
+    },
+    "go": {
+     "canonical": "[{\"name\":\"\ue000\"},{\"name\":\"\ud83d\ude00\"}]",
+     "sha256": "c8caa0a74a5f5d5b1e55e76073a87d96f7fffaf9058c73cdde8e47ade5a5ab25"
+    }
+   }
+  },
+  {
+   "id": "order-utf16-raw",
+   "note": "The same two names written as the characters themselves.",
+   "input": "[{\"name\":\"\ue000\"},{\"name\":\"\ud83d\ude00\"}]",
+   "expected": {
+    "canonical": "[{\"name\":\"\ue000\"},{\"name\":\"\ud83d\ude00\"}]",
+    "sha256": "c8caa0a74a5f5d5b1e55e76073a87d96f7fffaf9058c73cdde8e47ade5a5ab25"
+   },
+   "implementations": {
+    "python": {
+     "canonical": "[{\"name\":\"\ue000\"},{\"name\":\"\ud83d\ude00\"}]",
+     "sha256": "c8caa0a74a5f5d5b1e55e76073a87d96f7fffaf9058c73cdde8e47ade5a5ab25"
+    },
+    "javascript": {
+     "canonical": "[{\"name\":\"\ue000\"},{\"name\":\"\ud83d\ude00\"}]",
+     "sha256": "c8caa0a74a5f5d5b1e55e76073a87d96f7fffaf9058c73cdde8e47ade5a5ab25"
+    },
+    "go": {
+     "canonical": "[{\"name\":\"\ue000\"},{\"name\":\"\ud83d\ude00\"}]",
+     "sha256": "c8caa0a74a5f5d5b1e55e76073a87d96f7fffaf9058c73cdde8e47ade5a5ab25"
+    }
+   }
+  },
+  {
+   "id": "typical",
+   "note": "Two ordinary tools.",
+   "input": "[{\"name\":\"get_weather\",\"description\":\"Current weather for a city.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"},\"units\":{\"type\":\"string\",\"enum\":[\"metric\",\"imperial\"]}},\"required\":[\"city\"]}},{\"name\":\"list_cities\",\"description\":\"Cities with a station.\",\"inputSchema\":{\"type\":\"object\"}}]",
+   "expected": {
+    "canonical": "[{\"description\":\"Current weather for a city.\",\"inputSchema\":{\"properties\":{\"city\":{\"type\":\"string\"},\"units\":{\"enum\":[\"metric\",\"imperial\"],\"type\":\"string\"}},\"required\":[\"city\"],\"type\":\"object\"},\"name\":\"get_weather\"},{\"description\":\"Cities with a station.\",\"inputSchema\":{\"type\":\"object\"},\"name\":\"list_cities\"}]",
+    "sha256": "213257f2ac7e763ba04ceb61fba825188812442319ddf41399268aaadf120426"
+   },
+   "implementations": {
+    "python": {
+     "canonical": "[{\"description\":\"Current weather for a city.\",\"inputSchema\":{\"properties\":{\"city\":{\"type\":\"string\"},\"units\":{\"enum\":[\"metric\",\"imperial\"],\"type\":\"string\"}},\"required\":[\"city\"],\"type\":\"object\"},\"name\":\"get_weather\"},{\"description\":\"Cities with a station.\",\"inputSchema\":{\"type\":\"object\"},\"name\":\"list_cities\"}]",
+     "sha256": "213257f2ac7e763ba04ceb61fba825188812442319ddf41399268aaadf120426"
+    },
+    "javascript": {
+     "canonical": "[{\"description\":\"Current weather for a city.\",\"inputSchema\":{\"properties\":{\"city\":{\"type\":\"string\"},\"units\":{\"enum\":[\"metric\",\"imperial\"],\"type\":\"string\"}},\"required\":[\"city\"],\"type\":\"object\"},\"name\":\"get_weather\"},{\"description\":\"Cities with a station.\",\"inputSchema\":{\"type\":\"object\"},\"name\":\"list_cities\"}]",
+     "sha256": "213257f2ac7e763ba04ceb61fba825188812442319ddf41399268aaadf120426"
+    },
+    "go": {
+     "canonical": "[{\"description\":\"Current weather for a city.\",\"inputSchema\":{\"properties\":{\"city\":{\"type\":\"string\"},\"units\":{\"enum\":[\"metric\",\"imperial\"],\"type\":\"string\"}},\"required\":[\"city\"],\"type\":\"object\"},\"name\":\"get_weather\"},{\"description\":\"Cities with a station.\",\"inputSchema\":{\"type\":\"object\"},\"name\":\"list_cities\"}]",
+     "sha256": "213257f2ac7e763ba04ceb61fba825188812442319ddf41399268aaadf120426"
+    }
+   }
+  },
+  {
+   "id": "typical-whitespace",
+   "note": "The same tools with other whitespace and member order, and the two tools in the other order: RFC 8785 sorts members but keeps array order, so this differs from typical.",
+   "input": "[ {\"inputSchema\": {\"type\": \"object\"},\n   \"description\": \"Cities with a station.\", \"name\": \"list_cities\"},\n  {\"description\":\"Current weather for a city.\",\"name\":\"get_weather\",\"inputSchema\":{\"required\":[\"city\"],\"properties\":{\"units\":{\"enum\":[\"metric\",\"imperial\"],\"type\":\"string\"},\"city\":{\"type\":\"string\"}},\"type\":\"object\"}} ]",
+   "expected": {
+    "canonical": "[{\"description\":\"Cities with a station.\",\"inputSchema\":{\"type\":\"object\"},\"name\":\"list_cities\"},{\"description\":\"Current weather for a city.\",\"inputSchema\":{\"properties\":{\"city\":{\"type\":\"string\"},\"units\":{\"enum\":[\"metric\",\"imperial\"],\"type\":\"string\"}},\"required\":[\"city\"],\"type\":\"object\"},\"name\":\"get_weather\"}]",
+    "sha256": "010ea115048a58dc045ce47afa414963212759e418b0f2f6b9fe0b8c0c61e138"
+   },
+   "implementations": {
+    "python": {
+     "canonical": "[{\"description\":\"Cities with a station.\",\"inputSchema\":{\"type\":\"object\"},\"name\":\"list_cities\"},{\"description\":\"Current weather for a city.\",\"inputSchema\":{\"properties\":{\"city\":{\"type\":\"string\"},\"units\":{\"enum\":[\"metric\",\"imperial\"],\"type\":\"string\"}},\"required\":[\"city\"],\"type\":\"object\"},\"name\":\"get_weather\"}]",
+     "sha256": "010ea115048a58dc045ce47afa414963212759e418b0f2f6b9fe0b8c0c61e138"
+    },
+    "javascript": {
+     "canonical": "[{\"description\":\"Cities with a station.\",\"inputSchema\":{\"type\":\"object\"},\"name\":\"list_cities\"},{\"description\":\"Current weather for a city.\",\"inputSchema\":{\"properties\":{\"city\":{\"type\":\"string\"},\"units\":{\"enum\":[\"metric\",\"imperial\"],\"type\":\"string\"}},\"required\":[\"city\"],\"type\":\"object\"},\"name\":\"get_weather\"}]",
+     "sha256": "010ea115048a58dc045ce47afa414963212759e418b0f2f6b9fe0b8c0c61e138"
+    },
+    "go": {
+     "canonical": "[{\"description\":\"Cities with a station.\",\"inputSchema\":{\"type\":\"object\"},\"name\":\"list_cities\"},{\"description\":\"Current weather for a city.\",\"inputSchema\":{\"properties\":{\"city\":{\"type\":\"string\"},\"units\":{\"enum\":[\"metric\",\"imperial\"],\"type\":\"string\"}},\"required\":[\"city\"],\"type\":\"object\"},\"name\":\"get_weather\"}]",
+     "sha256": "010ea115048a58dc045ce47afa414963212759e418b0f2f6b9fe0b8c0c61e138"
+    }
+   }
+  }
+ ]
+}

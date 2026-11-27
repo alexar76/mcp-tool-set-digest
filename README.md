@@ -8,6 +8,7 @@ the tool text can tell whether they were served the same thing.
 
 * [`SPEC.md`](SPEC.md): the specification, `mcp-tool-set-digest/1` (draft of 2026-11-13, about four pages).
 * [`vectors/vectors.json`](vectors/vectors.json): 92 test vectors, with the canonical text each digest is the hash of.
+* [`vectors/jcs-subset.json`](vectors/jcs-subset.json): 22 of those inputs as plain RFC 8785 (JCS) cases, for any JSON value, with each implementation's answer. See [RFC 8785 alone](#rfc-8785-alone).
 * [`implementations/`](implementations/): reference implementations in Python, JavaScript and Go, each one file with no dependencies.
 * [`notes/implementation-admission.md`](notes/implementation-admission.md): a proposal, not part of the specification: binding a signed call to the admitted implementation that may run it, with three test cases.
 
@@ -67,6 +68,18 @@ The vectors cover what goes wrong in practice:
 | repeated names | a member written twice in a tool, inside `inputSchema` and outside the contract; once plainly and once escaped; an empty `name` first or last |
 | depth | 512 levels counted from the tools array on each side of the contract, and one past it |
 | several codes | two tools with one name whose extras also hold a lone surrogate or a number with no double; a lone surrogate before an entry that is not a tool |
+
+## RFC 8785 alone
+
+[`vectors/jcs-subset.json`](vectors/jcs-subset.json) takes 22 inputs from the vectors and asks for the RFC 8785
+canonical form of the whole JSON value, not of a tool set: number forms (`1E2`, `-0.0`, `1e21`, an integer beyond
+2^53, `1e400` refused), escapes and U+2028, NFC against NFD, lone surrogates refused, member names sorted by UTF-16
+code unit, and array order kept. Each case gives the canonical text and its SHA-256, or the reason RFC 8785 has no
+output, and what the Python, JavaScript and Go implementations each answered (`--canonical`, which reads one JSON
+value on standard input). It was cut for checking signed-receipt digests
+([x402-foundation/x402#4457](https://github.com/x402-foundation/x402/issues/4457)); repeated member names are left
+out, because RFC 8785 requires I-JSON and this specification keeps the last one. `scripts/jcs_subset.py` writes the
+file and `--check` compares it with what the implementations give now.
 
 To run everything in this repository:
 

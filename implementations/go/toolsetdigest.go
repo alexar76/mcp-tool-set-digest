@@ -743,6 +743,24 @@ func main() {
 	if len(os.Args) == 3 && os.Args[1] == "--vectors" {
 		os.Exit(checkVectors(os.Args[2]))
 	}
+	if len(os.Args) == 2 && os.Args[1] == "--canonical" {
+		// RFC 8785 alone, for any JSON value (vectors/jcs-subset.json): the canonical text and its SHA-256.
+		text, _ := io.ReadAll(os.Stdin)
+		value, err := Parse(text)
+		var canon string
+		if err == nil {
+			canon, err = Canonical(value)
+		}
+		if err != nil {
+			out, _ := json.Marshal(map[string]string{"error": result(Digest{}, err).Error})
+			fmt.Println(string(out))
+			os.Exit(2)
+		}
+		sum := sha256.Sum256([]byte(canon))
+		out, _ := json.Marshal(map[string]string{"canonical": canon, "sha256": hex.EncodeToString(sum[:])})
+		fmt.Println(string(out))
+		os.Exit(0)
+	}
 	text, _ := io.ReadAll(os.Stdin)
 	contract, extras, err := Both(text)
 	if err != nil {

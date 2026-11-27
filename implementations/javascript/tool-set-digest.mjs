@@ -284,6 +284,18 @@ function checkVectors(path) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const args = process.argv.slice(2);
   if (args.length === 2 && args[0] === '--vectors') process.exit(checkVectors(args[1]));
+  if (args.length === 1 && args[0] === '--canonical') {
+    // RFC 8785 alone, for any JSON value (vectors/jcs-subset.json): the canonical text and its SHA-256.
+    try {
+      const text = canonical(parse(readFileSync(0, 'utf8')));
+      console.log(JSON.stringify({ canonical: text, sha256: createHash('sha256').update(text, 'utf8').digest('hex') }));
+      process.exit(0);
+    } catch (error) {
+      if (!(error instanceof DigestError)) throw error;
+      console.log(JSON.stringify({ error: error.code }));
+      process.exit(2);
+    }
+  }
   try {
     const result = both(readFileSync(0, 'utf8'));
     console.log(JSON.stringify(Object.fromEntries(Object.entries(result).map(

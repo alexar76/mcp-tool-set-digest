@@ -346,6 +346,15 @@ def check_vectors(path: str) -> int:
 def main(argv: list[str]) -> int:
     if len(argv) == 2 and argv[0] == "--vectors":
         return check_vectors(argv[1])
+    if argv == ["--canonical"]:
+        # RFC 8785 alone, for any JSON value (vectors/jcs-subset.json): the canonical text and its SHA-256.
+        try:
+            text = canonical(parse(sys.stdin.read()))
+        except DigestError as error:
+            print(json.dumps({"error": error.code}))
+            return 2
+        print(json.dumps({"canonical": text, "sha256": hashlib.sha256(text.encode("utf-8")).hexdigest()}))
+        return 0
     try:
         result = both(sys.stdin.read())
     except DigestError as error:
