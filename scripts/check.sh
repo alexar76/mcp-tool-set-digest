@@ -89,6 +89,11 @@ grep -qF -- "$readme" README.md || { echo "README.md shows another output than: 
 # vectors/jcs-subset.json (RFC 8785 alone, for any JSON value) is what the three implementations answer now.
 python3 scripts/jcs_subset.py --check
 
+# vectors/vkey-cases.json (signed-note verifier keys; not part of the specification) is what the three
+# readers in scripts/vkey/ answer now.
+(cd scripts/vkey/go && go vet ./...)
+python3 scripts/vkey_cases.py --check
+
 # The worked example in notes/implementation-admission.md is what its script prints.
 python3 notes/implementation_admission_example.py | while IFS= read -r line; do
   grep -qF -- "$line" notes/implementation-admission.md || { echo "notes/implementation-admission.md lacks: $line"; exit 1; }

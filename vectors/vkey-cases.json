@@ -1,0 +1,465 @@
+{
+ "format": "signed-note verifier keys (c2sp.org/signed-note): parsing cases",
+ "licence": "Apache-2.0 OR MIT",
+ "how": "input is one verifier key, <key name>+hex(32-bit key ID)+base64(signature type || public key). Split it at the first two '+' only. expected is {name, keyId, type, keyBytes, keySha256} (type is the first decoded byte, keyBytes and keySha256 describe the bytes after it) or {refused}. The checks run in the order of refusals, and the first that fails names the refusal. implementations holds what each of three readers answered (scripts/vkey/: python, javascript, go), all equal. plus_in_base64_part and parts_when_split_on_every_plus are counted from the input: a reader that splits on every '+' gets three parts only where the first number is 0.",
+ "refusals": {
+  "not-three-parts": "fewer than two '+' in the text",
+  "bad-name": "the key name is empty or contains a Unicode space (signed-note: key names MUST be non-empty and MUST NOT contain Unicode spaces or plus characters)",
+  "bad-key-id": "the second part is not eight hex digits",
+  "bad-base64": "the third part is not canonical standard base64 with padding (RFC 4648 section 4; signed-note: decoders MUST reject non-canonical encodings), or holds fewer than two bytes",
+  "bad-key-length": "the public key has another length than the C2SP texts fix for its signature type (0x01 and 0x04: 32 bytes, 0x06: 1312 bytes)",
+  "key-id-mismatch": "the key ID is not SHA-256(key name || 0x0A || signature type || public key)[:4]"
+ },
+ "not_covered": "verifying a signature with the key; what a reader does with a signature type it does not know (the three readers return it with no length check); upper-case hex in the key ID (the three readers accept it); spaces other than U+0020 in a name (refused, no case).",
+ "why_here": "not part of mcp-tool-set-digest/1. Asked for beside jcs-subset.json in x402-foundation/x402#4457; scripts/vkey_cases.py writes and checks the file.",
+ "cases": [
+  {
+   "id": "c2sp-example",
+   "note": "The example key of the signed-note text. No '+' in the base64 part.",
+   "source": "c2sp.org/signed-note, Verifier keys, Example",
+   "input": "example.com/foo+530d903a+AekyeRrm56hApGFkyQR4ZCbV54Id2LKaANYcrnKv3U2k",
+   "plus_in_base64_part": 0,
+   "parts_when_split_on_every_plus": 3,
+   "expected": {
+    "keyBytes": 32,
+    "keyId": "530d903a",
+    "keySha256": "75be0ebd4485da8d0280aab422d66b870226428329b3c2bf0c7965b0910188fe",
+    "name": "example.com/foo",
+    "type": "0x01"
+   },
+   "implementations": {
+    "python": {
+     "keyBytes": 32,
+     "keyId": "530d903a",
+     "keySha256": "75be0ebd4485da8d0280aab422d66b870226428329b3c2bf0c7965b0910188fe",
+     "name": "example.com/foo",
+     "type": "0x01"
+    },
+    "javascript": {
+     "keyBytes": 32,
+     "keyId": "530d903a",
+     "keySha256": "75be0ebd4485da8d0280aab422d66b870226428329b3c2bf0c7965b0910188fe",
+     "name": "example.com/foo",
+     "type": "0x01"
+    },
+    "go": {
+     "keyBytes": 32,
+     "keyId": "530d903a",
+     "keySha256": "75be0ebd4485da8d0280aab422d66b870226428329b3c2bf0c7965b0910188fe",
+     "name": "example.com/foo",
+     "type": "0x01"
+    }
+   }
+  },
+  {
+   "id": "ed25519-one-plus",
+   "note": "A public witness key (Ed25519 cosignature, 0x04) with one '+' in the base64 part.",
+   "source": "a witness that cosigns histor.modelmarket.dev/log; its key ID is on the cosigned checkpoint",
+   "input": "krabbel.ct.ipng.ch+4b10dbd8+BO4sLOtnhktlqMCejDx9C5LDd+/xZxbmBb6BP9ZD2Def",
+   "plus_in_base64_part": 1,
+   "parts_when_split_on_every_plus": 4,
+   "expected": {
+    "keyBytes": 32,
+    "keyId": "4b10dbd8",
+    "keySha256": "301b1d809ccc6faf4ed61b88f00053f32373f14a8b4f39dc68ab298fbb70ed2e",
+    "name": "krabbel.ct.ipng.ch",
+    "type": "0x04"
+   },
+   "implementations": {
+    "python": {
+     "keyBytes": 32,
+     "keyId": "4b10dbd8",
+     "keySha256": "301b1d809ccc6faf4ed61b88f00053f32373f14a8b4f39dc68ab298fbb70ed2e",
+     "name": "krabbel.ct.ipng.ch",
+     "type": "0x04"
+    },
+    "javascript": {
+     "keyBytes": 32,
+     "keyId": "4b10dbd8",
+     "keySha256": "301b1d809ccc6faf4ed61b88f00053f32373f14a8b4f39dc68ab298fbb70ed2e",
+     "name": "krabbel.ct.ipng.ch",
+     "type": "0x04"
+    },
+    "go": {
+     "keyBytes": 32,
+     "keyId": "4b10dbd8",
+     "keySha256": "301b1d809ccc6faf4ed61b88f00053f32373f14a8b4f39dc68ab298fbb70ed2e",
+     "name": "krabbel.ct.ipng.ch",
+     "type": "0x04"
+    }
+   }
+  },
+  {
+   "id": "ed25519-two-plus",
+   "note": "A public witness key (0x04) with two '+' in the base64 part.",
+   "source": "transparency.dev/witnesses, read 2026-11-28",
+   "input": "staging.witness.transparency.goog/ring-any-bells+2e1a8dc9+BG5JTpLc3FJtwzgh1Uv+Qelz9qeOH2bfWjS1s0s+y4rL",
+   "plus_in_base64_part": 2,
+   "parts_when_split_on_every_plus": 5,
+   "expected": {
+    "keyBytes": 32,
+    "keyId": "2e1a8dc9",
+    "keySha256": "1d80ebc719d86b7921048eff7ecd531770cd814977c5b105b009765b6d52c2ab",
+    "name": "staging.witness.transparency.goog/ring-any-bells",
+    "type": "0x04"
+   },
+   "implementations": {
+    "python": {
+     "keyBytes": 32,
+     "keyId": "2e1a8dc9",
+     "keySha256": "1d80ebc719d86b7921048eff7ecd531770cd814977c5b105b009765b6d52c2ab",
+     "name": "staging.witness.transparency.goog/ring-any-bells",
+     "type": "0x04"
+    },
+    "javascript": {
+     "keyBytes": 32,
+     "keyId": "2e1a8dc9",
+     "keySha256": "1d80ebc719d86b7921048eff7ecd531770cd814977c5b105b009765b6d52c2ab",
+     "name": "staging.witness.transparency.goog/ring-any-bells",
+     "type": "0x04"
+    },
+    "go": {
+     "keyBytes": 32,
+     "keyId": "2e1a8dc9",
+     "keySha256": "1d80ebc719d86b7921048eff7ecd531770cd814977c5b105b009765b6d52c2ab",
+     "name": "staging.witness.transparency.goog/ring-any-bells",
+     "type": "0x04"
+    }
+   }
+  },
+  {
+   "id": "ml-dsa-44-witness",
+   "note": "The ML-DSA-44 key (0x06) the same witness publishes next to its Ed25519 key.",
+   "source": "transparency.dev/witnesses, read 2026-11-28",
+   "input": "staging.witness.transparency.goog/ring-any-bells+5774b075+Bi1GzCU2/5mxwhCBcfEpKliaoIg171qCFP3r3svllk/XlYj7hzNl9yVqfL2EBUdbC1vbnyCF6gD5XOFjsK4n64/mKMFIsWnuwoCVpqfUvHiM3sf48LMvFvWkQhHGEizw7FLiX+nmyM/EhzoNJ+98AKfLOjTvOFCqnb0RC9lLI+MlWGalc4fgNXYwcSBmShYfMBcaZzUt77SOHXORybbdeaGtRBU93KvBl03A9zipY5Hmn1E18ZtWtflwSV/tqgWs1Od1Hs+jHMGigKHKDaE4zYdRwkHFdf8VsTx4LJv2Ok0/4dfLxAZDEXAhpAbCbluBW5cf2Q6owZRa9obSEbjYXKCzSYySNh01rRf6K9o0VeFEK/6+CM45GvD/pMu++J1xGInxAjCoNqK3j3Rmx93WpIRmiwUhL+if1rPzrZO2m3Skek8QQx0Ke+HiaGcRYPUHqQ3Y/zJrJyXapg9lx9CgVXfOUWO89bocspztYABz43m5jqGaltjgOGUtYeoNvbtzzkJOugLLH43PwNPll064+oG4kmCAdVVS2VZHTm20l5qZ7jBumsrauD/S6dBpmZzua0hJlxf94I9gd8zmLsKLvjc9IAKkY26rMuAzl6Hu9NfXMM+8ZAtuJ6q2EKxy47dDn01AjrjZ/qYXiJbXDFTcHlUWF3fCujYgo8nCcoDYFbjby99TL++sHmivsz5kO2cR6xeJphlGt4Di5qxUaf9K70keUqr22R1rcLyGU5dPzWE0cAp+Z6dmvq4rM6QsTLfOjvZlydj/zfRs6BOBzlPEoqEWCN+A2MPCTm6NBV7L/24z0fUoGBh/08BGY37FU3nWwuldLKC+9nr1ItMhOKWKx8pkHnSllJEY0XVxpzE3eV08sCQyuRdVi++2K8Xnb3nUA7uQBr90IBCWzPzY/NWaBhVwqr+S1XzxHcHogWbVfdDxYgmj1tGWQaampa1ZwIBfjlHfn3ji2wSG8Mzd3jGTIX/4TlhN/rAlscnqnABEo24mzrQpOz7Dhc8hKhvAOXvS9b6GN6dml+O68UQg/qXNqBQep8UxOtmxmTMs5t/wBDNzkYwWONKwf682AaZfKaAOurHpkuGHlgCAtylWY/o4PDCyZ3e7wQfNRZK6asOUaq1CthaxRrLcemyvZYcydvw2ZFH/SF8J1RoeXtFRy4adRjPqNrzNk0um/cvxX8QB1Qf00sHXLOY7IfYdl6xUnsMsGrE5XkXWKxl8eN+VJhMpONQgB9MqgxLcQquesFpfeeo8k3MsX4+weJ8il/UNq7r6JWc+5/0E9bFDUTp30tSiwCEPEXBlQR8LbbBSTU7/cRru62D8L0/QvVnT4stFDouJpNPP5V7BbqPC36hQi7yVPXRyCUzsroDquICtaKqqnk90Ej0smXodBBXm4BHodXT1eXND5jR8N1AqzZcpucSmA6G5b33oXL3dlX+GP3q4JslJHRlQWFvp8Qbv6GYbnYGnvv4tIGxslibfdx1mKzuXczNeYlrlWJrddIXrFKgiwFBFTXG0HlIgeAMlF99g9Efyd4g/aJpmNLa8Qx7PV3+SZE3nrum37tyVVKfK9q7eXDYztOgIOKFNb3iS2CXCjrf3CsKGbXX+PvjqfBAH1cTc/lrDb2Rg2beH5mQam4zTPv2ndkPjEC0c5q92y+VNzBlKSnnBNlRg5fKIwbH3s8lOP51mdCYAdpwd8M6rYxs/jy37jWb9Utmh80HA3yR8KBDZYxEKkghO0PAFaC5kQIjUeYs=",
+   "plus_in_base64_part": 27,
+   "parts_when_split_on_every_plus": 30,
+   "expected": {
+    "keyBytes": 1312,
+    "keyId": "5774b075",
+    "keySha256": "f19aeeb1ec54b91755eb70185c3d5cb3c75f28963af87135253a287bf3fac32e",
+    "name": "staging.witness.transparency.goog/ring-any-bells",
+    "type": "0x06"
+   },
+   "implementations": {
+    "python": {
+     "keyBytes": 1312,
+     "keyId": "5774b075",
+     "keySha256": "f19aeeb1ec54b91755eb70185c3d5cb3c75f28963af87135253a287bf3fac32e",
+     "name": "staging.witness.transparency.goog/ring-any-bells",
+     "type": "0x06"
+    },
+    "javascript": {
+     "keyBytes": 1312,
+     "keyId": "5774b075",
+     "keySha256": "f19aeeb1ec54b91755eb70185c3d5cb3c75f28963af87135253a287bf3fac32e",
+     "name": "staging.witness.transparency.goog/ring-any-bells",
+     "type": "0x06"
+    },
+    "go": {
+     "keyBytes": 1312,
+     "keyId": "5774b075",
+     "keySha256": "f19aeeb1ec54b91755eb70185c3d5cb3c75f28963af87135253a287bf3fac32e",
+     "name": "staging.witness.transparency.goog/ring-any-bells",
+     "type": "0x06"
+    }
+   }
+  },
+  {
+   "id": "ml-dsa-44-test-1",
+   "note": "ML-DSA-44 test key w1 of the checkpoint-signature cases posted in x402 #4457.",
+   "source": "gist.github.com/johnInarti/0e06898fff2aa45c99bcd4b943a5a487 (test key from a published seed)",
+   "input": "example.com/witness-pq-1+595ecdb0+Br/Q7cyVUWZD3CXFxs/OUwNWJDVC4T0i3f9Dg+u1yYuUxeA7PzSTSHo3wPEHlL2C37X73Ccn1eKGt0PIxModCYIqc0zeWr4DzukEH7EksJYmF9DOerTIzpKGJvdqra5oS9dIbzG6s5ZeHC+C3wpIsIqDn24dsypCjxVFo0BnkiOnIzRuK1GHaHc0+wnEPfbyzzzblHSrR8bEABMbJcaA91FmJgqPdXC22zNl1hiQ06Cp3GIE/1PNSSMA3BU0a4r2dklbRnCr+PFV3KQVwMAbu2ofE0mxxiYsQgls09VggkewmsA7mUEs7QYZgh/rV5qXzxim8mymaiFHqTXydGHkhug6gN+FIuYvAnYCKlK9VbJqQOkGIDgY2+UUAgIj7B05Zi7vadF4NxHdilJN3B1P4RZ0YiQJsCHOmQK2Ir6sA3EXnmeyW8zjVA0NiufbbxhutPBAYW6UKztvSAZ8yzydc/mIjaZKMtdwcLFOsW3dJswZU3Nx1AqIht6BWY3UzWeT0HRNaoamQuWP0VGmSl/+h1PP9yLGUysci9oV7VGmG02B4gcnqic9BucQNADzF2Ykti1+qTqUrD9rl+CpIMOHeZMRkpTh3nNf96Jso1QnMLYQKFk4Q0slXwIwEcUUVObyaVtNB8iPa7qLN9qe+k5we+bALZ0Ov435FLiEdcQ6wzki4Mmovp0nwjSl0D7UQNTGSqA64CE69tje47kE+DwuExXOkHPnoVI9iC69qzVcPvqzH3YtyCRP+4MOz2jcih2FbKfjdctNT7cUR5IVIagpnSgNFqMhOrZxqaFlePpu8DqcB6zQ7qQpWMVeBHpCxZSZE11+oh3STsPwzO6ZQFjMT9DjxGGsOMAxA8iuToHckmS93Ci3/DdccxWEDtpT0M2DgBtguTlDM34OZm4hchgatkFbEvWd3iNfblVYotojeDfP5en0bCFyDiHoJzz8tgJ6M3KXZbLnsRwr7QNYPqAOreFpaZj97JW/mZLKKugk1Z89Syjscswhz1YOoo2Jr5xPQalcJ54vTIE2J7UgcskmljYrjmUrlhUsBK1XCSqyHZYhQTt9iwLqiDSaUlSHHeSQHxniRuGiSGCq+PPQOoajOloccAXQDgMMrIvLueBMLFkz02rSpVENLw3HrT7iQBcCwfUznj5ezvUw/cpzNs+DSGVhs99MPzTx8XalMbh3H9+SKn0/x/mPrsH1ECOOepQgxhrWxkb1IzI3DntFD9C2J1ZcVjGa3PlzsWhxRO8q3kOyFEgQRcNDXHSUpOgwRdie0a3Vvq61XCR2U45c+4l0WIQ+CAXFGwGqeSOSHbFKhAhqexInkkjJLM2nO5FSh3WFT7hiRgtkqrZHOzrxIy+aaYz8F6kzLBDuK9GYtXDaRmdhXjKKfkp3okC6enVEo4wPBGSZ+CXV4BygHu58E/kNR2LLUlD6tZKPrxzUZfdaeX1vCWwZke+1RMFN1ouv1j/3cXTlMVaChy6/eZDT+eBljkQbGKabx/1vSOKlm697tSSlKvsWPcv02fMzuF/YrHct772t85hmm4OzxDfYyKsE4GPcIS8WxrBB7rWgTJuroOwPJuJRy/X4XaiKJZp95ATZ81LDt/JOxZdgskdM29gewkbDVrpRugbeKw6woMDT03wIvlUV8pyQHZHMHFEi7HvA/j23jLwscDW/cjebI/kb7bNSWsqU7vm4qgOd2k0q3Eno31ExxwdDfzBkLM9gvCol8wOINV46LIpC36Y7kEBu+RQ=",
+   "plus_in_base64_part": 24,
+   "parts_when_split_on_every_plus": 27,
+   "expected": {
+    "keyBytes": 1312,
+    "keyId": "595ecdb0",
+    "keySha256": "3828bcfd16b9833c624ea0fd73c39ebb1eca71f4b0e41ead0685335c8198b863",
+    "name": "example.com/witness-pq-1",
+    "type": "0x06"
+   },
+   "implementations": {
+    "python": {
+     "keyBytes": 1312,
+     "keyId": "595ecdb0",
+     "keySha256": "3828bcfd16b9833c624ea0fd73c39ebb1eca71f4b0e41ead0685335c8198b863",
+     "name": "example.com/witness-pq-1",
+     "type": "0x06"
+    },
+    "javascript": {
+     "keyBytes": 1312,
+     "keyId": "595ecdb0",
+     "keySha256": "3828bcfd16b9833c624ea0fd73c39ebb1eca71f4b0e41ead0685335c8198b863",
+     "name": "example.com/witness-pq-1",
+     "type": "0x06"
+    },
+    "go": {
+     "keyBytes": 1312,
+     "keyId": "595ecdb0",
+     "keySha256": "3828bcfd16b9833c624ea0fd73c39ebb1eca71f4b0e41ead0685335c8198b863",
+     "name": "example.com/witness-pq-1",
+     "type": "0x06"
+    }
+   }
+  },
+  {
+   "id": "ml-dsa-44-test-2",
+   "note": "ML-DSA-44 test key w2 of the same cases.",
+   "source": "gist.github.com/johnInarti/0e06898fff2aa45c99bcd4b943a5a487 (test key from a published seed)",
+   "input": "example.com/witness-pq-2+9911208e+BjoiUJSUCyR1KcH7+JcebMX7ME/UWTCy0ZXcSUhFy4q4MrlQMhfmSC8L32MGA9ITv8dmmPCD/FglrBeUo5Vm97SUaM3JiHdVpqkrEgMUXJ6fWb8HsfuHIyKv9ziB9tlgLWi+3GDsppB/8U+f5m4uM/UVPcuO92yCkTw+n1zvT90p04BLyIoz/CJgiWTX36UDQ3l5le6UnbIGHe+jJNJOwstKja3eep+i60GgP+UmSO98yJEcr7RWPb3J70s5RxrJlH6nlAioT2EU3dnngERVVPV2EfqeIBrMN/BoKiOLFa83NmR9DzBiTUOhVWDwLl/Xt1ELHREK+LW6Vq+wUL5Kd38mZNBfU700iUwQdCZuA6mig0tj1RvKXzyUlED1ESRagBsaZuk4Z4hFZEKkYXBIi4AvykSNduIDJzcYpQhQzjyWe+6F2GAODoCbJvY/Fg4uZx0UznomSWWDgkuNlVzmJb4jo7r0IbZhaWGEhPSiNnCDr+lIg/a11aEUgy/CkHpCq1gQWdovNP9XYJhcyLWV/06vAmstugvuHY7AW6Y8O3uUclxcAa28hrnuniai+P2Rnhg6zuRnTxZgmcc9h63P4q/3BCrcpshqCNWaxb/s/+dgBRZ6XO4UcL/7Vwwrbvy/+F94xpZAUvLjOzc0vhija49/RTmeIW9x6gWy1VvZT5KHcLjfvi4HRHDzl6qjq3KTkA2t3G/h+8Qu5TXyrtY1nHHn49rRHJknRzwitH4FW6wZFPsHecNLeRAC+qYSjXYW8eqlUKHaaLCuDDrfxLppUj5R6G3OewM4wxxDStkdJh5z2yWcno1wok+Tq4a8ikOtrdanxTks765106ryuvKCxX9wtRRhznbLonQvPERK7Apnv7RqbzZivGjhnT4dhXTAUsknB++r1+InWd8udnic6yeMlEZthFdT0YMEd1NsM0lZPZQrgJ21ag27Mi5kt7cEPryssHIRTVLa8mUeD5yNYeTXuvB6RwF0ksZnKIUy8nZ8l8T6DMIbejkWBamJCKdNkprft2NRifZmV1BJp2tQzA+jy2LWw+En5NfiI8SXE6KGr0lQDybBGDlBwyZFP16wltAsTBbrnQbM6q19r+VP7/DEzRR0qX86V1UcLKcUKeMNUpBJEJ+HRN3tks94rpH3SRBrZ7jmAHgKIt7ofrtcuo8GEYelRbVXb2y6+OxfFzqIQHhuN9cyFelXsl4r1DpLJVlcN7XG6HfpxTblyIHdaCJDB3rWKntQfCNLmarelgpOiiGIVFrSXxZv30VQwDiP1EAmQSVy1/E/w7isfGy3gPLDZUAy4pTdyN72Lf1t9ZPyiq+fCeWl4VyaH2Hqu/pikUwrPbChyvix2PlX97LhgsKlhjectstKi+uZE60gEVIdlPNY+ib3T6uskkDnFqIZ1HbwpxbxJrqVvbJqKDHANbiv3dtGp21P5+/NtTmFAuXqT3mNMAcvVgXf52PkrvJvN/tkBVmhHD8VKj7b55xcSx4BKXGVSa9JfNaVHipoWQlzXAlzJsSTc+6ERjzYIX5xLbF1k8voKeQbi2pdA+yfIM0VpUn8yjbHBfUQmzMvNwhOyGwg9232ad+64+8MD81SYonmG4CrF1WTUV1guYZOHfE2tC2dlJgVWplZnrHWDJrKnS/AQQe13baAqABg5L1Fo71dSN8u2zLe/o69MgHSctMGyDE6lcVekbw2dO3KdVdvt6P4ZVpCwePg5fF5tXIt87jNU06o4wJTjAXBebqWcHU=",
+   "plus_in_base64_part": 33,
+   "parts_when_split_on_every_plus": 36,
+   "expected": {
+    "keyBytes": 1312,
+    "keyId": "9911208e",
+    "keySha256": "34f9a34efa21ddd744e62a83c126f2652c459a63a290af00a3131da57a339c25",
+    "name": "example.com/witness-pq-2",
+    "type": "0x06"
+   },
+   "implementations": {
+    "python": {
+     "keyBytes": 1312,
+     "keyId": "9911208e",
+     "keySha256": "34f9a34efa21ddd744e62a83c126f2652c459a63a290af00a3131da57a339c25",
+     "name": "example.com/witness-pq-2",
+     "type": "0x06"
+    },
+    "javascript": {
+     "keyBytes": 1312,
+     "keyId": "9911208e",
+     "keySha256": "34f9a34efa21ddd744e62a83c126f2652c459a63a290af00a3131da57a339c25",
+     "name": "example.com/witness-pq-2",
+     "type": "0x06"
+    },
+    "go": {
+     "keyBytes": 1312,
+     "keyId": "9911208e",
+     "keySha256": "34f9a34efa21ddd744e62a83c126f2652c459a63a290af00a3131da57a339c25",
+     "name": "example.com/witness-pq-2",
+     "type": "0x06"
+    }
+   }
+  },
+  {
+   "id": "two-parts",
+   "note": "The base64 part is missing.",
+   "source": "c2sp-example cut short",
+   "input": "example.com/foo+530d903a",
+   "plus_in_base64_part": null,
+   "parts_when_split_on_every_plus": 2,
+   "expected": {
+    "refused": "not-three-parts"
+   },
+   "implementations": {
+    "python": {
+     "refused": "not-three-parts"
+    },
+    "javascript": {
+     "refused": "not-three-parts"
+    },
+    "go": {
+     "refused": "not-three-parts"
+    }
+   }
+  },
+  {
+   "id": "name-with-plus",
+   "note": "The name is example.com/a+b and the key ID is the one that name would have. The base64 part holds no '+', so a reader that splits from the right takes it for a good key. Reading from the left, the second part is `b`, which is no key ID.",
+   "source": "the c2sp-example key under another name",
+   "input": "example.com/a+b+3fb1844f+AekyeRrm56hApGFkyQR4ZCbV54Id2LKaANYcrnKv3U2k",
+   "plus_in_base64_part": 1,
+   "parts_when_split_on_every_plus": 4,
+   "expected": {
+    "refused": "bad-key-id"
+   },
+   "implementations": {
+    "python": {
+     "refused": "bad-key-id"
+    },
+    "javascript": {
+     "refused": "bad-key-id"
+    },
+    "go": {
+     "refused": "bad-key-id"
+    }
+   }
+  },
+  {
+   "id": "empty-name",
+   "note": "No key name; the key ID is the one an empty name would have.",
+   "source": "the c2sp-example key under another name",
+   "input": "+e74076da+AekyeRrm56hApGFkyQR4ZCbV54Id2LKaANYcrnKv3U2k",
+   "plus_in_base64_part": 0,
+   "parts_when_split_on_every_plus": 3,
+   "expected": {
+    "refused": "bad-name"
+   },
+   "implementations": {
+    "python": {
+     "refused": "bad-name"
+    },
+    "javascript": {
+     "refused": "bad-name"
+    },
+    "go": {
+     "refused": "bad-name"
+    }
+   }
+  },
+  {
+   "id": "name-with-space",
+   "note": "The name holds U+0020; the key ID is the one that name would have.",
+   "source": "the c2sp-example key under another name",
+   "input": "example.com/fo o+8ace4939+AekyeRrm56hApGFkyQR4ZCbV54Id2LKaANYcrnKv3U2k",
+   "plus_in_base64_part": 0,
+   "parts_when_split_on_every_plus": 3,
+   "expected": {
+    "refused": "bad-name"
+   },
+   "implementations": {
+    "python": {
+     "refused": "bad-name"
+    },
+    "javascript": {
+     "refused": "bad-name"
+    },
+    "go": {
+     "refused": "bad-name"
+    }
+   }
+  },
+  {
+   "id": "key-id-short",
+   "note": "Six hex digits where eight are needed.",
+   "source": "c2sp-example with a shorter key ID",
+   "input": "example.com/foo+530d90+AekyeRrm56hApGFkyQR4ZCbV54Id2LKaANYcrnKv3U2k",
+   "plus_in_base64_part": 0,
+   "parts_when_split_on_every_plus": 3,
+   "expected": {
+    "refused": "bad-key-id"
+   },
+   "implementations": {
+    "python": {
+     "refused": "bad-key-id"
+    },
+    "javascript": {
+     "refused": "bad-key-id"
+    },
+    "go": {
+     "refused": "bad-key-id"
+    }
+   }
+  },
+  {
+   "id": "key-id-mismatch",
+   "note": "The last digit of the key ID is changed.",
+   "source": "c2sp-example with another key ID",
+   "input": "example.com/foo+530d903b+AekyeRrm56hApGFkyQR4ZCbV54Id2LKaANYcrnKv3U2k",
+   "plus_in_base64_part": 0,
+   "parts_when_split_on_every_plus": 3,
+   "expected": {
+    "refused": "key-id-mismatch"
+   },
+   "implementations": {
+    "python": {
+     "refused": "key-id-mismatch"
+    },
+    "javascript": {
+     "refused": "key-id-mismatch"
+    },
+    "go": {
+     "refused": "key-id-mismatch"
+    }
+   }
+  },
+  {
+   "id": "base64-cut",
+   "note": "The last base64 character is missing.",
+   "source": "c2sp-example cut short",
+   "input": "example.com/foo+530d903a+AekyeRrm56hApGFkyQR4ZCbV54Id2LKaANYcrnKv3U2",
+   "plus_in_base64_part": 0,
+   "parts_when_split_on_every_plus": 3,
+   "expected": {
+    "refused": "bad-base64"
+   },
+   "implementations": {
+    "python": {
+     "refused": "bad-base64"
+    },
+    "javascript": {
+     "refused": "bad-base64"
+    },
+    "go": {
+     "refused": "bad-base64"
+    }
+   }
+  },
+  {
+   "id": "base64-url-alphabet",
+   "note": "The base64 part in the URL-safe alphabet ('-' and '_').",
+   "source": "ed25519-one-plus in another alphabet",
+   "input": "krabbel.ct.ipng.ch+4b10dbd8+BO4sLOtnhktlqMCejDx9C5LDd-_xZxbmBb6BP9ZD2Def",
+   "plus_in_base64_part": 0,
+   "parts_when_split_on_every_plus": 3,
+   "expected": {
+    "refused": "bad-base64"
+   },
+   "implementations": {
+    "python": {
+     "refused": "bad-base64"
+    },
+    "javascript": {
+     "refused": "bad-base64"
+    },
+    "go": {
+     "refused": "bad-base64"
+    }
+   }
+  },
+  {
+   "id": "base64-not-canonical",
+   "note": "The unused bits of the last base64 character are set: the same bytes, another text.",
+   "source": "ml-dsa-44-test-1 with one character changed",
+   "input": "example.com/witness-pq-1+595ecdb0+Br/Q7cyVUWZD3CXFxs/OUwNWJDVC4T0i3f9Dg+u1yYuUxeA7PzSTSHo3wPEHlL2C37X73Ccn1eKGt0PIxModCYIqc0zeWr4DzukEH7EksJYmF9DOerTIzpKGJvdqra5oS9dIbzG6s5ZeHC+C3wpIsIqDn24dsypCjxVFo0BnkiOnIzRuK1GHaHc0+wnEPfbyzzzblHSrR8bEABMbJcaA91FmJgqPdXC22zNl1hiQ06Cp3GIE/1PNSSMA3BU0a4r2dklbRnCr+PFV3KQVwMAbu2ofE0mxxiYsQgls09VggkewmsA7mUEs7QYZgh/rV5qXzxim8mymaiFHqTXydGHkhug6gN+FIuYvAnYCKlK9VbJqQOkGIDgY2+UUAgIj7B05Zi7vadF4NxHdilJN3B1P4RZ0YiQJsCHOmQK2Ir6sA3EXnmeyW8zjVA0NiufbbxhutPBAYW6UKztvSAZ8yzydc/mIjaZKMtdwcLFOsW3dJswZU3Nx1AqIht6BWY3UzWeT0HRNaoamQuWP0VGmSl/+h1PP9yLGUysci9oV7VGmG02B4gcnqic9BucQNADzF2Ykti1+qTqUrD9rl+CpIMOHeZMRkpTh3nNf96Jso1QnMLYQKFk4Q0slXwIwEcUUVObyaVtNB8iPa7qLN9qe+k5we+bALZ0Ov435FLiEdcQ6wzki4Mmovp0nwjSl0D7UQNTGSqA64CE69tje47kE+DwuExXOkHPnoVI9iC69qzVcPvqzH3YtyCRP+4MOz2jcih2FbKfjdctNT7cUR5IVIagpnSgNFqMhOrZxqaFlePpu8DqcB6zQ7qQpWMVeBHpCxZSZE11+oh3STsPwzO6ZQFjMT9DjxGGsOMAxA8iuToHckmS93Ci3/DdccxWEDtpT0M2DgBtguTlDM34OZm4hchgatkFbEvWd3iNfblVYotojeDfP5en0bCFyDiHoJzz8tgJ6M3KXZbLnsRwr7QNYPqAOreFpaZj97JW/mZLKKugk1Z89Syjscswhz1YOoo2Jr5xPQalcJ54vTIE2J7UgcskmljYrjmUrlhUsBK1XCSqyHZYhQTt9iwLqiDSaUlSHHeSQHxniRuGiSGCq+PPQOoajOloccAXQDgMMrIvLueBMLFkz02rSpVENLw3HrT7iQBcCwfUznj5ezvUw/cpzNs+DSGVhs99MPzTx8XalMbh3H9+SKn0/x/mPrsH1ECOOepQgxhrWxkb1IzI3DntFD9C2J1ZcVjGa3PlzsWhxRO8q3kOyFEgQRcNDXHSUpOgwRdie0a3Vvq61XCR2U45c+4l0WIQ+CAXFGwGqeSOSHbFKhAhqexInkkjJLM2nO5FSh3WFT7hiRgtkqrZHOzrxIy+aaYz8F6kzLBDuK9GYtXDaRmdhXjKKfkp3okC6enVEo4wPBGSZ+CXV4BygHu58E/kNR2LLUlD6tZKPrxzUZfdaeX1vCWwZke+1RMFN1ouv1j/3cXTlMVaChy6/eZDT+eBljkQbGKabx/1vSOKlm697tSSlKvsWPcv02fMzuF/YrHct772t85hmm4OzxDfYyKsE4GPcIS8WxrBB7rWgTJuroOwPJuJRy/X4XaiKJZp95ATZ81LDt/JOxZdgskdM29gewkbDVrpRugbeKw6woMDT03wIvlUV8pyQHZHMHFEi7HvA/j23jLwscDW/cjebI/kb7bNSWsqU7vm4qgOd2k0q3Eno31ExxwdDfzBkLM9gvCol8wOINV46LIpC36Y7kEBu+RR=",
+   "plus_in_base64_part": 24,
+   "parts_when_split_on_every_plus": 27,
+   "expected": {
+    "refused": "bad-base64"
+   },
+   "implementations": {
+    "python": {
+     "refused": "bad-base64"
+    },
+    "javascript": {
+     "refused": "bad-base64"
+    },
+    "go": {
+     "refused": "bad-base64"
+    }
+   }
+  },
+  {
+   "id": "ed25519-short-key",
+   "note": "Signature type 0x01 with a 31-byte key; the key ID is the one those bytes would have.",
+   "source": "the c2sp-example key without its last byte",
+   "input": "example.com/foo+31925af9+AekyeRrm56hApGFkyQR4ZCbV54Id2LKaANYcrnKv3U0=",
+   "plus_in_base64_part": 0,
+   "parts_when_split_on_every_plus": 3,
+   "expected": {
+    "refused": "bad-key-length"
+   },
+   "implementations": {
+    "python": {
+     "refused": "bad-key-length"
+    },
+    "javascript": {
+     "refused": "bad-key-length"
+    },
+    "go": {
+     "refused": "bad-key-length"
+    }
+   }
+  }
+ ]
+}

@@ -9,6 +9,7 @@ the tool text can tell whether they were served the same thing.
 * [`SPEC.md`](SPEC.md): the specification, `mcp-tool-set-digest/1` (draft of 2026-11-13, about four pages).
 * [`vectors/vectors.json`](vectors/vectors.json): 92 test vectors, with the canonical text each digest is the hash of.
 * [`vectors/jcs-subset.json`](vectors/jcs-subset.json): 22 of those inputs as plain RFC 8785 (JCS) cases, for any JSON value, with each implementation's answer. See [RFC 8785 alone](#rfc-8785-alone).
+* [`vectors/vkey-cases.json`](vectors/vkey-cases.json): 16 signed-note verifier keys with what three readers make of each. Not part of the specification. See [Verifier keys](#verifier-keys).
 * [`implementations/`](implementations/): reference implementations in Python, JavaScript and Go, each one file with no dependencies.
 * [`notes/implementation-admission.md`](notes/implementation-admission.md): a proposal, not part of the specification: binding a signed call to the admitted implementation that may run it, with three test cases.
 
@@ -80,6 +81,26 @@ value on standard input). It was cut for checking signed-receipt digests
 ([x402-foundation/x402#4457](https://github.com/x402-foundation/x402/issues/4457)); repeated member names are left
 out, because RFC 8785 requires I-JSON and this specification keeps the last one. `scripts/jcs_subset.py` writes the
 file and `--check` compares it with what the implementations give now.
+
+## Verifier keys
+
+[`vectors/vkey-cases.json`](vectors/vkey-cases.json) is not about tool lists. A transparency-log checkpoint is
+checked with [signed-note](https://c2sp.org/signed-note) verifier keys, written
+`<key name>+hex(key ID)+base64(signature type || public key)`. The base64 part is standard base64 and may itself
+contain `+`, so only the first two `+` separate. A reader that splits on every `+` passes its tests with a key
+whose base64 part happens to hold none, and fails on the next key: about every second Ed25519 key, and
+practically every ML-DSA-44 key (1,752 base64 characters). The file has 16 cases:
+
+* six keys to accept: the example of the signed-note text (no `+`), two Ed25519 keys of public witnesses (one
+  and two `+`), the ML-DSA-44 key one of those witnesses publishes (27), and two ML-DSA-44 test keys (24 and 33);
+* ten to refuse: two parts only, a name with `+` that a reader splitting from the right would accept, an empty
+  name, a name with a space, a short key ID, a key ID that does not recompute, base64 cut short, in the URL-safe
+  alphabet or not canonical, and an Ed25519 key of 31 bytes.
+
+Each case gives the parts of the key or the refusal, and what readers in Python, JavaScript and Go answered
+(`scripts/vkey/`, standard library only). The cases were asked for beside the RFC 8785 cases in
+[x402-foundation/x402#4457](https://github.com/x402-foundation/x402/issues/4457). `scripts/vkey_cases.py` writes
+the file and `--check` compares it with what the readers give now. Verifying signatures is not covered.
 
 To run everything in this repository:
 
